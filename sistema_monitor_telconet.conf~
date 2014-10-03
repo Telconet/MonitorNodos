@@ -6,8 +6,8 @@ intervalo-monitoreo = 5
 
 #intervalo de puerta en MILISEGUNDOS
 intervalo-monitoreo-puerta = 2000
-archivo-columnas-BD-ADC = /home/root/Desktop/MonitorNodo/columnasMonitoreoADC
-archivo-columnas-BD-DIO = /home/root/Desktop/MonitorNodo/columnasMonitoreoDIO
+archivo-columnas-BD-ADC = /home/eduardo/Desktop/MonitorNodos_PC/columnasMonitoreoADC
+archivo-columnas-BD-DIO = /home/eduardo/Desktop/MonitorNodos_PC/columnasMonitoreoDIO
 ip-servidor-snmp = 192.168.137.150:162;172.24.4.71:162
 comunidad-snmp = telconet
 nombre-sesion-snmp = sesionsmnp

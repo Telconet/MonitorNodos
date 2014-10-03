@@ -188,7 +188,8 @@ int insertarRegistro(char *nombreTabla, char **valores, int numeroValores, statu
         conn = connect(sockfd, (struct sockaddr *) &serv_addr, sizeof (serv_addr));
         if (conn < 0) {
             printf("\n Error : Connect Failed \n");
-            return 1;
+            close(sockfd);
+            return -1;
         }
 
         cont = 0;
@@ -208,38 +209,8 @@ int insertarRegistro(char *nombreTabla, char **valores, int numeroValores, statu
                 }
             }
         }
-/*
-        cont = 0;
-        do {
-            write(sockfd, fromUser, strlen(fromUser));
-            n = read(sockfd, recvBuff, sizeof (recvBuff) - 1);
-            recvBuff[n - 1] = '\0';
-            printf("\nRcv: %s", recvBuff);
-            cont++;
-        } while (strcmp(recvBuff, "OK") != 0 && cont < 3);
-*/
-
-        /*
-                i = 1;
-                while ((n = read(sockfd, recvBuff, sizeof (recvBuff) - 1)) > 0) {
-                    recvBuff[n] = '\0';
-                    printf("\nRcv: %s", recvBuff);
-                    if (strcmp(recvBuff, "Inicio") == 0) {
-                        write(sockfd, valores[0], strlen(valores[0]));
-                    } else if (strcmp(recvBuff, "Next") == 0) {
-                        if (i == numeroValores) {
-                            write(sockfd, "FIN", 3);
-                        } else {
-                            write(sockfd, valores[i], strlen(valores[i]));
-                            i++;
-                        }
-                    } else if (strcmp(recvBuff, "OK") == 0) {
-                        break;
-                    }
-                }
-         */
-
-        return 1;
+        close(sockfd);
+        return 0;
     }
     return -1;
 }
