@@ -250,10 +250,8 @@ int main(int argc, char *argv[]) {
     double inicio, fin=0;
     double descanso=0;
     inicio=clock()/CLOCKS_PER_SEC;
-    while (((fin + descanso) - inicio) < (60 * 13)) {
+    while (1){ //((fin + descanso) - inicio) < (60 * 13)) {
 
-        
-	
 	realizarMediciones(&listaMediciones);
         revisarStatusMediciones(listaMediciones);
 	status_puerto_DIO stp = statusPuerto(puerto_DIO_5);//Sensor del aire principal
@@ -261,9 +259,9 @@ int main(int argc, char *argv[]) {
         almacenarMediciones(&listaMediciones, informacion_nodo.id, configuracion->rutaArchivoColumnasBDADC, NUMERO_MEDICIONES_ADC,stp,sts);
         //configuracion->valoresMinimosPermitidosMediciones, configuracion->numeroValoresMinimosPermitidos);
         sleep(configuracion->intervaloMonitoreo); //damos tiempo que sensores se activen, etc.
-        descanso += (configuracion->intervaloMonitoreo);	//tiempo que le toma a la función sleep ejecutarse
-	fin=clock()/CLOCKS_PER_SEC;
-        printf("\nTiempo: %.2f - %.2f = %.2f",fin,inicio, ((fin + descanso) - inicio));
+        //descanso += (configuracion->intervaloMonitoreo);	//tiempo que le toma a la función sleep ejecutarse
+	//fin=clock()/CLOCKS_PER_SEC;
+        //printf("\nTiempo: %.2f - %.2f = %.2f",fin,inicio, ((fin + descanso) - inicio));
 	
 	/*
 	Código donde se implementa el control automático de la temperatura de los nodos movistar. Se logra lo siguiente:
@@ -279,8 +277,6 @@ int main(int argc, char *argv[]) {
 	*/
 	
 	//Empieza código de Control Automático de la temperatura
-	
-	
 	
 	if (stp == PUERTO_OFF || temperatura > 30){
 	    activarPuerto(puerto_DIO_1);//Activar el secundario
