@@ -1,0 +1,77 @@
+#include "controladordef.h"
+
+
+/**
+ *Rutina que hara limpieza de arhivos/proceso al salir
+ */
+void salir(int status){
+    printf("Saliendo...\n");
+    close(sd1);
+    exit(status);  
+}
+
+//BORRAR?
+void enviarSenalProceso(int senal, int pid){
+    
+    if(kill(pid, senal) != 0){
+        printf("Informacion: El proceso o daemon PID %d no esta corriendo.\n", pid);
+    }
+}
+
+
+/**
+ *Esta rutina recibe el string del usuario, lo analiza, y crea el comando correspondiente
+ */
+int crearComando(char *comando_usuario, struct comando *com){
+    
+    if(comando_usuario == NULL || com == NULL){
+        return -1;
+    }
+    else{        
+        if(strcmp(SALIR_DAEMON_STR, comando_usuario) == 0){
+            com->com = SALIR_DAEMON;
+            com->numero_argumentos = 0;
+            com->long_argumentos = NULL;
+            com->argumentos = NULL;
+            return 1;
+        }
+        else if(strcmp(INFORMACION_NODO_STR, comando_usuario) == 0){
+            com->com = INFORMACION_NODO;
+            com->numero_argumentos = 0;
+            com->long_argumentos = NULL;
+            com->argumentos = NULL;
+            return 1;
+        }
+        else if(strcmp(INFORMACION_CONF_STR, comando_usuario) == 0){
+            com->com = INFORMACION_CONF;
+            com->numero_argumentos = 0;
+            com->long_argumentos = NULL;
+            com->argumentos = NULL;
+            return 1;
+        }
+        else if(strcmp(INFORMACION_VALORES_MIN_STR, comando_usuario) == 0){
+            com->com = INFORMACION_VAL_MIN;
+            com->numero_argumentos = 0;
+            com->long_argumentos = NULL;
+            com->argumentos = NULL;
+            return 1;
+        }
+        else return -1;         //comando invalido
+    } 
+}
+
+/** 
+ *Rutina para traducir los status de respuesta
+ */
+char *traducirStatusRespuesta(int codigo)
+{
+    
+    switch(codigo){
+        case OK:
+            return "OK";
+        case ERROR:
+            return "Error";
+        default:
+            return NULL;
+    }
+}

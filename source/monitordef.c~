@@ -1,0 +1,682 @@
+#include "monitordef.h"
+
+
+/**
+ *Salir. Limpiamos todos los recursos
+ */
+void salir(int status){
+    
+    printf("INFO: El daemon de monitoreo se esta cerrando...\n");
+    
+    //cerramos el socket
+    close(sd1);
+    close(sd2);
+    
+    //Cerramos el sistema SNMP
+    cerrarSistemaSnmp(ss);
+    
+    //Removemos el archivo con el pid    
+    char comandoRemover[strlen(ARCHIVO_PROCESS_ID_DAEMON) + strlen(COMANDO_REMOVER_ARCHIVO)];
+    
+    strcpy(comandoRemover, COMANDO_REMOVER_ARCHIVO);
+    strcat(comandoRemover, ARCHIVO_PROCESS_ID_DAEMON);
+    system(comandoRemover);
+    
+    //Cerramos la base de datos
+    //cerrarBD(conexion);
+    
+    exit(status);
+}
+
+
+
+/**
+ *Esta rutina manejara las peticiones del controlador.
+ *El thread principal creará worker threads para
+ *manejar las peticiones de cada controlador.
+ */
+void *manejarComandosControlador(void *sd){
+    
+    char mensaje[MAX_BUFFER_SIZE];
+    int tRet;
+    int bytes_recibidos = -1;                        //????
+    int *sd_intptr = (int *)sd;                    //el file descriptor, convertimos a int *
+    int sid2 = *sd_intptr;                           //obtenemos el valor apuntado por el puntero
+    char pidControladorStr[6];
+    int pidControlador = 0;
+    
+    //Inicializamos el buffer
+    memset(mensaje, 0, MAX_BUFFER_SIZE);
+    
+    //recibimos el PID del controlador
+    bytes_recibidos = recv(sid2, pidControladorStr, 6, 0);
+    
+    if(bytes_recibidos > 0){
+        pidControlador = atoi(pidControladorStr);
+        
+#ifdef DEBUG
+        printf("PID del controlador conectado es %d\n", pidControlador);
+#endif
+    }
+    else printf("Error al recibir PID\n");
+    
+    bytes_recibidos = -1;
+    
+    //Empezamos a recibir los mensajes
+    do{
+        int comando;
+        
+        bytes_recibidos = recv(sid2, &comando, sizeof(comando), 0);  
+        
+        //Error al recibir
+        if(bytes_recibidos < 0){
+#ifdef DEBUG
+            perror("Error en el mensaje ");
+#endif
+            return;
+        }
+        else if(bytes_recibidos > 0){
+            
+            if(comando == COMANDO){                     //Poner en rutina recibir_datos
+                
+                struct comando com;
+                
+                //Si no hubo errores, procesamos el comando
+                if(recibirDatos(sid2, &com, COMANDO) == 1){            //Agregar n =??
+                    procesarComando(sid2, &com);                              //Realizamos acciones pedidas
+                    //TODO obtener resultados
+                    //TODO Generar la respuesta
+                    //TODO enviar respuesta (enviada por procesar comando)
+                }
+                //liberar memoria del comando
+            }
+        }
+        else{
+            //Aqui se entra cuando el controlador es cerrado.
+            close(sid2);
+#ifdef DEBUG
+            printf("El thread %u ha finalizado.\n", (unsigned int)pthread_self());
+#endif
+        }
+        
+    }while(bytes_recibidos > 0);
+    
+    return;
+}
+
+
+
+/**
+ *Rutina que se encarga de monitorear exclusivamente la puerta de acceso al nodo
+ */
+void *monitorPuerta(void *sd){
+    
+    struct configuracionMonitor *conf = (struct configuracionMonitor *)sd;
+    int intervaloMonitoreo = conf->intervaloMonitoreoPuerta;
+    int puertaAbierta = 0;
+    int puertaAbiertaUltMed = 0;
+    
+    printf("INFO: La puerta de acceso al nodo esta siendo monitoreada.\n");
+    while(1){
+        //TODO chequear el sensor de la puerta
+        //TODO Verificar si esta abierto o cerrado
+        //TODO si esta abierto, enviar traps
+        sleep(intervaloMonitoreo);
+        
+    }
+}
+
+/**
+ *Funcion que manejara el envio y recepcion de comandos
+ *mediante Unix sockets. Correrá en un thread individual.
+ */
+void *recComandosEnvResp(void *ptr)
+{
+    struct sockaddr_un local, remoto;
+    int tamano_local, tamano_remoto, bytes_recibidos ,fin;
+    int tRet;
+    pthread_t peticiones_thread;
+
+    //Obtenemos un socket
+    sd1 = socket(AF_UNIX, SOCK_STREAM, 0);
+    
+    if(sd1 == -1){
+        perror("socket");
+        exit(1);
+    }
+    
+    //asociamos el socket descriptor 1 a el archivo
+    local.sun_family = AF_UNIX;
+    strcpy(local.sun_path, ARCHIVO_SOCKET_IPC);
+    unlink(local.sun_path);
+    
+    tamano_local = strlen(local.sun_path) + sizeof(local.sun_family); 
+    
+    if( bind(sd1, (struct sockaddr *) &local, tamano_local) == -1)
+    {
+        perror("bind");
+        exit(1);
+    }
+    
+    //empezamos a escuchar las conexion
+    if( listen(sd1, NO_MAX_CONEX) == -1){
+        perror("listen");
+        exit(1);
+    }
+    
+    //TODO: Crear la thread de monitoreo?
+    
+    //Aceptamos la conexiones entrantes, y generamos un thread que
+    //maneje la peticion
+    while(1){
+        
+        //aceptamos una conexion
+        tamano_remoto = sizeof(remoto);
+        sd2 = accept(sd1, (struct sockaddr *) &remoto, &tamano_remoto);
+
+        //Si hay error salimos
+        if(sd2 == -1){
+            perror("accept");
+            exit(0);
+        }
+        else printf("INFO: Conectado a un controlador.\n");
+        
+        //Aqui manejamos las peticiones de los controladores
+        //en un nuevo thread    
+        tRet = pthread_create(&peticiones_thread, NULL, manejarComandosControlador, &sd2);
+    }
+}
+
+
+/**
+ *Manejador de la señales de terminacion del daemon.
+ *
+ */
+void manejadorSenalSIGTERMSIGINT(int sig)
+{    
+    //Tipo de señales
+    if(sig == SIGINT)
+    {
+        printf("Catched SIGINT signal\n");
+    }
+    else if(sig == SIGTERM){
+        printf("Cerrando el daemon...\n"); 
+    }
+    
+    salir(0);
+}
+
+
+/**
+ *Procesar comandos. Esta rutina tomara un comando con sus argumentos, y realiza
+ *la acción pertinente
+ */
+int procesarComando(int fd, struct comando *com)
+{
+    if(com == NULL || fd < 0)
+    {
+        printf("INFO: Se recibio un comando invalido\n");
+        return -1;
+    }
+    
+    struct respuesta res;
+    int lon = 0;
+    char *buffer = NULL;
+    int longitudMinimaBuffer = 8192;
+    
+    //Vemos que tipo de comando es
+    switch (com->com){
+        case SALIR_DAEMON:
+            
+            //Creamos la respuesta
+            res.status = OK;
+            res.res = "INFO: El monitor de nodos ha sido cerrado.";
+            res.long_res = strlen(res.res);
+            enviarDatos(fd, &res, RESPUESTA);
+            salir(0);
+            break;
+        case INFORMACION_NODO:
+            res.status = OK;
+            lon = longitudMinimaBuffer*sizeof(char);
+            buffer = malloc(lon);              //CHECK
+            if(buffer != NULL){
+                memset(buffer, 0, lon);
+                sprintf(buffer, "Nombre del nodo: %s\nDireccion IP del monitor: %s", informacion_nodo.id, informacion_nodo.ip);
+                res.long_res = strlen(buffer);
+                res.res = buffer;
+                enviarDatos(fd, &res, RESPUESTA);
+                free(res.res);
+            }
+            break;
+        case INFORMACION_CONF:
+            res.status = OK;
+            
+            //Obtenemos los servidores SNMP
+            int i;
+            int lon_str_snmp = sizeof(char)*(configuracion->numeroServidoresSNMP*60);
+            char *servidoresSNMP = malloc(lon_str_snmp);
+            
+            if(servidoresSNMP != NULL){
+                memset(servidoresSNMP, 0, lon_str_snmp /(sizeof(char)));            
+                for(i = 0; i < configuracion->numeroServidoresSNMP; i++){
+                    if(i == 0){
+                        strncat(servidoresSNMP, "Servidores SNMP: ", 20);
+                    }
+                    else{
+                        strncat(servidoresSNMP, "                 ", 20);
+                    }
+                    strncat(servidoresSNMP, configuracion->ipServidorSNMP[i],21);
+                    
+                    if(i < configuracion->numeroServidoresSNMP - 1){
+                        strncat(servidoresSNMP, "\n", 20);
+                    }
+                    else strncat(servidoresSNMP, "\0", 20);        
+                }
+            }
+            else return -1;
+            
+            //Buffer de respuesta
+            lon = longitudMinimaBuffer*sizeof(char) + lon_str_snmp;
+            buffer = malloc(lon);              //CHECK
+            if(buffer != NULL){
+                memset(buffer, 0, lon);
+                
+                strcat(buffer,"Interfaz de red del monitor: ");
+                strcat(buffer, configuracion->interfazRed);
+                strcat(buffer,"\n");
+                strcat(buffer,"Direccion IP del monitor: ");
+                strcat(buffer,informacion_nodo.ip);
+                strcat(buffer,"\n");
+                strcat(buffer,"Direccion IP del servidor de base de datos: ");
+                strcat(buffer,configuracion->ipServidorBD);
+                strcat(buffer,"\n");
+                strcat(buffer,"Archivo de columnas de base de datos: ");
+                strcat(buffer,configuracion->rutaArchivoColumnasBD);
+                strcat(buffer,"\n");
+                strcat(buffer, servidoresSNMP);
+                strcat(buffer, "\n");
+                strcat(buffer,"Intervalo de monitoreo: ");
+                
+                char bufferNumero[20];
+                sprintf(bufferNumero, "%.2f", ((float)(configuracion->intervaloMonitoreo)) / ((float)(MILISEGUNDOS_POR_MINUTO)));
+                strcat(buffer,bufferNumero);
+                strcat(buffer," minuto(s)\n");
+                
+                memset(bufferNumero, 0, 20);
+                sprintf(bufferNumero, "%d", configuracion->intervaloMonitoreoPuerta);
+                strcat(buffer,"Intervalo de monitoreo de puerta: ");
+                strcat(buffer,bufferNumero);
+                strcat(buffer," segundo(s)");
+            
+                res.long_res = strlen(buffer);
+                res.res = buffer;
+                enviarDatos(fd, &res, RESPUESTA);
+                free(res.res);
+            }
+            else return -1;
+            break;
+        case INFORMACION_VAL_MIN:
+            buffer = malloc(longitudMinimaBuffer);
+            
+            if(buffer == NULL) return -1;           //no hay memoria
+            
+            memset(buffer, 0, longitudMinimaBuffer);
+            
+            strcat(buffer, "Valores minimos configurados:\n");
+            
+            int j;
+            for(j = 0; j < configuracion->numeroValoresMinimosPermitidos; j++){
+                char numero[5];
+                memset(&numero, 0, 5);
+                  
+                //Tipo de valor
+                if(j < 3){
+                    strcat(buffer, "Temperatura ");
+                    sprintf(numero,"%d",j + 1);
+                    strcat(buffer, numero);
+                    
+                }
+                else if(j == 3){
+                    strcat(buffer, "Humedad");
+                }
+                else if(j > 3 && j < 8){
+                    strcat(buffer, "Voltaje DC ");
+                    sprintf(numero,"%d", j - 4 + 1);
+                    strcat(buffer, numero);  
+                }
+                else if(j >= 8 && j < 12){
+                    strcat(buffer, "Corriente DC ");
+                    sprintf(numero,"%d", j - 8 + 1);
+                    strcat(buffer, numero);
+                }
+                else if(j >= 12){
+                    strcat(buffer, "Corriente AC ");
+                    sprintf(numero,"%d", j - 12 + 1);
+                    strcat(buffer, numero);
+                }
+                
+                strcat(buffer,": ");
+                strcat(buffer, configuracion->valoresMinimosPermitidosMediciones[j]);
+            
+                //Unidad
+                if(j < 3){
+                    strcat(buffer, " C");
+                }
+                else if(j == 3){
+                    strcat(buffer, " % HR");
+                }
+                else if(j > 3 && j < 8){
+                    strcat(buffer, " V");
+                    
+                }
+                else if(j >= 8){
+                    strcat(buffer, " A");
+                }
+                
+                //Salto
+                if(j < configuracion->numeroValoresMinimosPermitidos - 1){
+                    strcat(buffer, "\n");
+                }
+                else strcat(buffer, "\0");
+            }
+            
+            res.status = OK;
+            res.res = buffer;
+            res.long_res = strlen(buffer);
+            enviarDatos(fd, &res, RESPUESTA);
+            free(res.res);
+            break;
+        default:
+            printf("ALERTA: Comando invalido.\n");
+            return -1;
+        
+    }
+    
+    return 1;
+}
+
+
+
+/**
+ *Rutina que lee el archivo de configuracion
+ */
+struct configuracionMonitor* leerArchivoConfiguracion(char *rutaArchivo){
+    FILE *archivo = fopen(rutaArchivo, "r");
+    
+    if(archivo != NULL){
+        printf("INFO: Ruta de archivo de configuracion: %s\n", rutaArchivo);
+        
+        struct configuracionMonitor *configuracion = malloc(sizeof(struct configuracionMonitor));
+        char linea[8192];
+        
+        while(1){
+            
+            int num;
+            num = 0;
+            char **valores;
+            
+            //ponemos en cero el buffer
+            memset(linea, 0, 8192);
+            
+            if(fgets(linea, 8192, archivo) == NULL){
+                return configuracion;
+            }
+                        
+            //Ignoramos las lineas que contienen el caractar '#', que es de comentario
+            if(strstr(linea,"#") == NULL){
+                
+                if(strstr(linea, ID_NODO) != NULL){
+                    //Parametro de ID del nodo
+                    valores = obtenerValorConfig(linea, &num);
+                    if(valores != NULL){
+                        configuracion->id_nodo = valores[0];
+                        printf("INFO: ID del nodo: %s\n",configuracion->id_nodo);
+                        
+                    }
+                    else return NULL;
+                }
+                else if(strstr(linea, INTERVALO_MON_PUERTA) != NULL){
+                    //Intervalo de monitoreo de la puerta
+                    valores = obtenerValorConfig(linea, &num);
+                    
+                    if(valores != NULL){
+                        int intervalo = atoi(valores[0]);
+                        
+                        if(intervalo == 0){
+                            configuracion->intervaloMonitoreoPuerta = INTERVALO_MON_PUERTA_PRED;    //valor predeterminado
+                        }
+                        else{
+                            configuracion->intervaloMonitoreoPuerta = intervalo;    //valor predeterminado
+                        }
+                        
+                        printf("INFO: Intervalo de monitoreo de puerta de entrada: %.2f segundo(s)\n",((double)(configuracion->intervaloMonitoreoPuerta)));
+                    }
+                    else return NULL;
+                }
+                else if(strstr(linea, INTERVALO_MON) != NULL){
+                    //Intervalo de monitoreo 
+                    valores = obtenerValorConfig(linea, &num);
+                    
+                    if(valores != NULL){
+                        int intervalo = atoi(valores[0]);
+                        
+                        if(valores[0] == 0){
+                            configuracion->intervaloMonitoreo = INTERVALO_MON_PRED;    //valor predeterminado
+                        }
+                        else{
+                            configuracion->intervaloMonitoreo = intervalo;              //valor predeterminado
+                        }
+                        printf("INFO: Intervalo de monitoreo de status del nodo: %.2f minuto(s)\n",((double)(configuracion->intervaloMonitoreo))/(MILISEGUNDOS_POR_MINUTO));
+                    }
+                    else return NULL;
+                }
+                else if(strstr(linea, ARCHIVO_COL_BD) != NULL){ 
+                    valores = obtenerValorConfig(linea, &num);
+                    if(valores != NULL){
+                        configuracion->rutaArchivoColumnasBD = valores[0];
+                        printf("INFO: Archivo de columnas de la base de datos: %s\n", configuracion->rutaArchivoColumnasBD);
+                    }
+                    else return NULL;
+                }
+                else if(strstr(linea, IP_SERVIDOR_BASE_DE_DATOS) != NULL){
+                    valores = obtenerValorConfig(linea, &num);
+                    if(valores != NULL){
+                        configuracion->ipServidorBD = valores[0];
+                        printf("INFO: IP del servidor de la base de datos: %s\n", configuracion->ipServidorBD);
+                    }
+                    else return NULL;
+                }
+                else if(strstr(linea, USUARIO_BASE_DE_DATOS) != NULL){
+                    valores = obtenerValorConfig(linea, &num);
+                    if(valores != NULL){
+                        configuracion->usuarioBD = valores[0];
+                        printf("INFO: Usuario de la base de datos: %s\n", configuracion->usuarioBD);
+                    }
+                    else return NULL;
+
+                }
+                else if(strstr(linea, CLAVE_BASE_DE_DATOS) != NULL){
+                    valores = obtenerValorConfig(linea, &num);
+                    if(valores != NULL){
+                        configuracion->claveBD = valores[0];
+                    }
+                    else return NULL;
+                   
+                }
+                else if(strstr(linea, BASE_DE_DATOS) != NULL){
+                    valores = obtenerValorConfig(linea, &num);
+                    
+                    if(valores != NULL){
+                        configuracion->BD = valores[0];
+                        printf("INFO: Base de datos: %s\n", configuracion->BD);
+                    }
+                    else return NULL;
+                    
+                }
+                else if(strstr(linea, PUERTO_BASE_DE_DATOS) != NULL){
+                    
+                    valores = obtenerValorConfig(linea, &num);
+                    if(valores != NULL){
+                        int puerto = atoi(valores[0]);
+                          
+                        if(puerto == 0){
+                            configuracion->puertoBD = 0;    //valor predeterminado
+                        }
+                        else{
+                            configuracion->puertoBD = puerto;    //valor predeterminado
+                        }
+                        printf("INFO: Puerto de la base de datos: %d\n", configuracion->puertoBD);
+                    }
+                    else return NULL;
+                }
+                else if(strstr(linea, IP_SERVIDOR_SNMP) != NULL){
+                    valores = obtenerValorConfig(linea, &num);
+                    if(valores != NULL){
+                        configuracion->ipServidorSNMP = valores;
+                        configuracion->numeroServidoresSNMP = num; 
+                        int i;
+                        for(i = 0; i < configuracion->numeroServidoresSNMP; i++){
+                            printf("INFO: IP del servidor SNMP %d: %s\n", (i+1), configuracion->ipServidorSNMP[i]);
+                        }
+                    }
+                    else return NULL;
+                }
+                else if(strstr(linea, COMUNIDAD_SNMP) != NULL){
+                    valores = obtenerValorConfig(linea, &num);
+                    if(valores != NULL){
+                        configuracion->comunidadSNMP = valores[0];
+                         printf("INFO: Comunidad SNMP: %s\n", configuracion->comunidadSNMP);
+                    }
+                    else return NULL;
+                }
+                else if(strstr(linea, SESION_SNMP) != NULL){ 
+                    valores = obtenerValorConfig(linea, &num);
+                    if(valores != NULL){
+                        configuracion->nombreSesionSNMP = valores[0];
+                        printf("INFO: Sesion SNMP: %s\n", configuracion->nombreSesionSNMP);
+                    }
+                    else return NULL;
+                }
+                else if(strstr(linea, VALORES_MINIMOS_PERMITIDOS) != NULL){
+                    valores = obtenerValorConfig(linea, &num);
+                    if(valores != NULL){
+                        
+                        //configuracion->valoresMinimosPermitidosMediciones = valores;
+                        configuracion->numeroValoresMinimosPermitidos = num;
+        
+                        //Asignamos los valores a la configuracion
+                        configuracion->valoresMinimosPermitidosMediciones = valores;
+                    }
+                    else return NULL;
+                }
+                else if(strstr(linea, DESTINATARIOS_ALERTAS) != NULL){
+                    valores = obtenerValorConfig(linea, &num);
+                    if(valores != NULL){
+                        //configuracion->valoresMinimosPermitidosMediciones = valores;
+                        configuracion->numeroDestinatariosAlertas = num;
+        
+                        //Asignamos los valores a la configuracion
+                        configuracion->destinatariosAlertas = valores;
+#ifdef DEBUG
+                        int i=0;
+                        for(i = 0; i< configuracion->numeroDestinatariosAlertas; i++){
+                            printf("Destinatario %d: %s\n", i+1, configuracion->destinatariosAlertas[i]);
+                        }
+#endif
+                    }
+                    else return NULL;
+                }
+            }
+        }
+        fclose(archivo);
+    }
+    return NULL;
+}
+
+/**
+ *Obtiene el valor de un parametro de configuracion. El parametro que
+ *se obtiene es el valor despues del simbolo '='
+ */
+char **obtenerValorConfig(char *linea, int *numeroValores){
+    
+    int long_linea = strlen(linea);
+    int numero_caracteres = 0;
+    int i = 0;
+    
+    while(*linea != '='){
+        linea++;                            //avanzamos el puntero hasta el simbolo igual
+        i++;
+        
+        if(i >= long_linea) return NULL;    //no queremos sobrepasarnos si nos mandan un string mal formateado
+    }
+    
+    linea++;                                //nos movemos pasando el simbolo =
+    
+    while(*linea == ' ' || *linea == '\t'){ //pasamos cualquier espacio entre el valor y el simbolo igual
+        linea++;
+        i++;
+        if(i >= long_linea) return NULL;    //no queremos sobrepasarnos si nos mandan un string mal formateado
+    }
+    
+    //Contamos cuanto puntos y comas hay para saber el numero de valores
+    char *ptr;
+    ptr = linea;
+    int numeroPuntoYComas = 0;
+    int w = i;
+    
+    while(*ptr != '\n'){
+        
+        if(*ptr == ';'){
+            numeroPuntoYComas++;
+        }
+        ptr++;
+        w++;
+        if(w >= long_linea) return NULL;
+    }
+
+    //Asignamos memoria para el arreglo y notificamos cuantos valores serán extraidos
+    char **buffer = malloc((numeroPuntoYComas + 1)*(sizeof(*buffer)));
+    *numeroValores = numeroPuntoYComas + 1;
+    
+    //En este punto ya tenemos la direccion del primer caracter del valor
+    //Ahora contamos la longitud de caracteres del valor, para saber la cantida
+    //memoria que debemos asignar
+    int j = 0; 
+    for(j = 0; j < *numeroValores ; j++){
+        char *inicio_valor = linea;
+        numero_caracteres = 0;
+        
+        while(*linea != '\n'){
+            linea++;
+            numero_caracteres++;
+            if(*linea == ';'){
+                linea++;
+                break;
+            }
+            i++;
+            if(i >= long_linea) return NULL;    //no queremos sobrepasarnos si nos mandan un string mal formateado
+        }
+#ifdef DEBUG   
+        printf("Numero caracteres %d\n", numero_caracteres);
+#endif
+        
+        //numero_caracteres++;            //para el caracter nulo
+        buffer[j] = malloc((numero_caracteres + 1)*sizeof(char));
+        
+        if(buffer == NULL){
+            return NULL;            
+        }
+        
+        memset(buffer[j], 0, numero_caracteres);
+        
+        //copiamos los charateres al buffer
+        strncpy(buffer[j], inicio_valor, numero_caracteres);
+        buffer[j][numero_caracteres] = '\0';               //???
+        
+#ifdef DEBUG
+        printf("Valor leido: %s\n", buffer[j]);
+#endif
+        
+    }
+    return buffer;
+}

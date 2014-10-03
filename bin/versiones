@@ -1,0 +1,40 @@
+Versiones del programa de monitoreo (conmon)
+--------------------------------------------
+
+
+*v1.2
+
+Divisores de voltaje DC 5.6k/105.6k.
+1 sensor de temperatura (pin 1, canal 1).
+1 rele de combustible (pin 3, canal 5).
+1 rele de combustible (pin 5, canal 9).	
+
+NOTA: este ejecutable se debe usar con los archivos
+columnasMonitoreoADC actualizado.
+
+*v1.1
+
+Divisores voltaje DC 5.6k/105.6k.
+Tres sensores de temperatura (pines 1, 5, 9).
+
+*v1.0
+
+Programa original.
+Divisores voltaje DC 56k/1056k.
+Tres sensores de temperatura.
+
+
+Versiones del controlador de monitor (conmon)
+--------------------------------------------
+
+
+v1.1
+
+Controlador que permite cambio de valores de alerta de combustible/generador
+
+NOTA: usar esta version del controlador con la version 1.2 o superior del
+monitor de nodos (monnod)
+
+v1.0
+
+Version original

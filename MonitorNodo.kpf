@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Komodo Project File - DO NOT EDIT -->
+<project id="084bd3f9-4c28-4e1b-bb54-b4a5e369ebe7" kpf_version="4" name="MonitorNodo.kpf">
+<preference-set idref="084bd3f9-4c28-4e1b-bb54-b4a5e369ebe7">
+  <boolean id="import_live">1</boolean>
+</preference-set>
+</project>

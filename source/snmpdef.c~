@@ -1,0 +1,104 @@
+#include "snmpdef.h"
+
+/**
+ *Rutina para conectarnos al servidor SNMP
+ *
+ */
+netsnmp_session *inicializarSistemaSnmp(char *ip_servidor,char *nombre, char *comunidad, int versionSNMP){
+    
+    netsnmp_session *sesion = malloc(sizeof(netsnmp_session));
+    
+    if(sesion == NULL) return NULL;
+  
+    //Inicializamos la librearia SNMP
+    init_snmp(nombre);
+    
+    //Iniciamos una sesion con valores por defecto
+    snmp_sess_init(sesion);                   
+    
+    //asignamos los valores de la sesion
+    sesion->peername = strdup(ip_servidor);   
+    
+    //Version SNMP v1
+    sesion->version = versionSNMP;
+
+    //nombre de comunidad usado para autenticación
+    sesion->community = comunidad;
+    sesion->community_len = strlen(sesion->community);
+    
+    return sesion;
+}
+
+/**
+ *Establecer session
+ */
+netsnmp_session *abrirSesion(netsnmp_session *sesion){
+
+    netsnmp_session *ss = snmp_open(sesion);                     
+
+    if (!ss) {
+      snmp_sess_perror("ack", sesion);
+      printf("ERROR: No se pudo abrir la sesion SNMP\n");
+      return NULL;
+    }
+    
+    return ss;
+}
+
+/**
+ *Rutina para enviar traps
+ */
+
+int enviarTrap(netsnmp_session *sesion, char *ip_agente, int trapGenerico, int trapEspecifico){
+    
+    netsnmp_pdu *pdu;
+    int status;
+
+    oid anOID[MAX_OID_LEN];
+    size_t anOID_len;
+    
+    //Crreamos el trap
+    pdu = snmp_pdu_create(SNMP_MSG_TRAP);
+    anOID_len = MAX_OID_LEN;
+    
+    //Error al crear el PDU
+    if ( !pdu ) {
+            fprintf(stderr, "Fallo al crear PDU SNMP.\n");
+            SOCK_CLEANUP;
+            exit(1);
+    }
+    
+    //Configurar los campos manualmente
+    pdu->trap_type = trapGenerico;
+    pdu->specific_type = trapEspecifico;
+
+    //TODO Añadir la IP del agente
+    //unsigned char ip[4];
+    parse_IP(ip_agente, pdu->agent_addr);
+    
+    //los traps se envian hacia el puerto 162
+    
+    //oid
+    if (!snmp_parse_oid(".1.3.6.1.2.1.1.1.8", anOID, &anOID_len)) {
+      snmp_perror(".1.3.6.1.2.1.1.1.8");
+      SOCK_CLEANUP;
+      printf("Error\n");
+      exit(1);
+    }
+    
+    //anadimos oid
+    //snmp_add_null_var(pdu, anOID, anOID_len);
+     
+    //enviamos el trap
+    status = snmp_send(sesion, pdu);
+}
+
+/**
+ *Esta rutina cierra la sesion SNMP
+ */
+void cerrarSistemaSnmp(netsnmp_session *sesion){
+    if(sesion != NULL){
+        snmp_close(sesion);
+    }
+}
+

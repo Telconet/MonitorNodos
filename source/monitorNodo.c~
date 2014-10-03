@@ -1,0 +1,167 @@
+#include "monitordef.h"
+
+/**
+ *Rutina para hacer del proceso un daemon. TODO
+ *
+ */
+void daemonize(){
+    
+    int i=fork();           //Emancipamos el proceso...
+    if (i<0) exit(1); 
+    if (i>0) exit(0); 
+}
+
+/**
+ *Programa principal
+ */
+int main(int argc, char *argv[]){
+    
+    //cambiemos el directorio de trabajo
+    chdir(DIRECTORIO_DE_TRABAJO);
+    
+    //Configuramos los signal handlers, para manejar Ctrl-C
+    signal(SIGINT, manejadorSenalSIGTERMSIGINT);
+    signal(SIGTERM, manejadorSenalSIGTERMSIGINT);
+    
+    processID = getpid();
+
+    //Primero verificamos si el archivo existe
+    //Tratamos de abrir el archivo, si no hay error, el archivo existe, y ya
+    //hay un proceso corriendo
+    verificarProgramaNoCorriendo(ARCHIVO_PROCESS_ID_DAEMON); 
+    
+    //Aqui reportamos nuestro pid al proceso de control
+    reportarPID(ARCHIVO_PROCESS_ID_DAEMON, processID);
+    
+    //Leemos el archivo de configuracion. Extraemos la ruta del archivo
+    //de los argumentos de ejecucion
+    if(argc < 2){
+        printf("ERROR: No se ha proporcionado la ruta del archivo de configuracion. Este programa se cerrara.\n");
+        salir(1);
+    }
+    
+    char * rutaArchivoConfiguracion = argv[1];
+    configuracion = leerArchivoConfiguracion(rutaArchivoConfiguracion);
+    
+    if(configuracion == NULL){
+        printf("ERROR: Existe un error en el formato del archivo de configuracion %s,revise la configuracion del mismo. Este programa se cerrara.\n", rutaArchivoConfiguracion);
+        salir(1);
+    }
+    
+    //Solo para informacion
+    configuracion->interfazRed = obtenerInterfazDeRed();
+    
+    //Conectamos a la base de datos
+    MYSQL *conexion = NULL;
+    conexion = conectarBD(configuracion->ipServidorBD, configuracion->usuarioBD, configuracion->claveBD, configuracion->BD);
+
+    //***PRUEBA****
+    
+    //leemos las columnas, para poder crear las tablas
+    char **columnas = NULL;
+    int numeroColumnas = 0;
+    
+    columnas = leerArchivoTipoColumnas("/home/eduardo/Documents/columnasMonitoreo", &numeroColumnas);
+    //crearTabla(&conexion, "nodo_120_2010", columnas, numeroColumnas);
+
+    
+    //eliminarTabla(&conexion, "nodo_120_2010");
+    char *valores[23];
+    
+    valores[0] = "urdesa";
+    valores[1] = "2010-10-21";
+    valores[2] = "14:29";
+    
+    int i = 0;
+
+    for(i = 3; i < 18 ; i++){
+        valores[i] = "679.45";
+    }
+    
+    valores[18] = "cerrado";
+    valores[19] = "apagado";
+    valores[20] = "apagado";
+    valores[21] = "apagado";
+    valores[22] = "apagado";
+    
+    for(i = 0; i < 100; i++){
+        insertarRegistro(&conexion, "nodo_120_2010", valores, 23);
+    }
+    
+    //email
+    char **dest = malloc(1*sizeof(*dest));
+    
+    dest[0] = "emurillo@uno.edu";
+    
+    enviarEMail(dest, 1, "Mensaje enviado por el monitor", "noc@telconet.net", "Mensaje de prueba de la libreria de email\n");
+
+    
+    //*****Fin PRUEBA****
+    
+    //Creamos el thread que será el local de recepcion de comandos
+    //y envio de respuestas
+    int tRet;
+    
+    tRet = pthread_create(&localComandosThread, NULL, recComandosEnvResp, NULL);
+    
+    if(tRet != 0){
+        perror("ERROR: No se pudo crear el thread de comandos. Saliendo...\n");
+        salir(0);
+    }
+    
+    int tPuerta;
+    
+    tPuerta = pthread_create(&monPuertaThread, NULL, monitorPuerta, (void *)configuracion);
+    
+    if(tRet != 0){
+        perror("ALERTA: No se pudo crear el thread de monitoreo de la puerta de acceso. Saliendo...\n");
+    }
+    
+    //Creamos un thread que verifique la puerta con mayor periodicidad (cada 0.5 veces?)
+    
+    //Obtener info del Nodo
+    //Obtenemos la direccion IP del dispositivo
+    char ip_host[NI_MAXHOST];
+    
+    if((obtenerIPHost(ip_host, NI_MAXHOST)) != -1){
+        int longitud_id = strlen(configuracion->id_nodo);
+        informacion_nodo.id = malloc(longitud_id + 1);
+        memset(informacion_nodo.id, 0, longitud_id + 1);
+        strncpy(informacion_nodo.id, configuracion->id_nodo, longitud_id);
+        informacion_nodo.ip = ip_host;
+        informacion_nodo.lon_ip = strlen(informacion_nodo.ip);
+    }
+    
+    //Configuramos el servidor SNMP
+    netsnmp_session *sesion;
+    
+    //inicializarSistemaSnmp(&sesion, IP_SERVIDOR_SNMP, NOMBRE_SESION_SNMP, COMUNIDAD_SNMP, SNMP_VERSION_1);
+    //sesion = inicializarSistemaSnmp("192.168.1.120:162", "snmpsesion", "telconet", SNMP_VERSION_1);
+    sesion = inicializarSistemaSnmp(configuracion->ipServidorSNMP[0], configuracion->nombreSesionSNMP, configuracion->comunidadSNMP, SNMP_VERSION_1);
+    ss = abrirSesion(sesion);
+    
+    if(ss == NULL){
+        printf("ERROR: no se pudo abrir la sesion SNMP.\n");
+    }
+    
+    printf("INFO: Direccion IP del monitor de nodo: %s\n", informacion_nodo.ip);
+    printf("INFO: Se inicializo el servidor SNMP.\n");
+    
+    //Trap de inicio frio
+    enviarTrap(ss, informacion_nodo.ip, 0, 0);          
+    
+    //Empezamos el monitoreo
+    printf("INFO: Programa de monitoreo iniciado (PID %d).\n", processID);
+    printf("INFO: Monitoreando...\n");
+    
+    while(1){
+        pause();
+        //TODO realizar monitoreo
+        //TODO chequear valores
+        //TODO si valores fuera de rango, enviar alarmas
+        //TODO Almancenar en la base de datos
+        //TODO dormir por intervalo
+    }
+    
+    return 0;    
+}

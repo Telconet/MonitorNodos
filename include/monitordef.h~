@@ -1,0 +1,90 @@
+#ifndef MONITORDEF_H
+#define MONITORDEF_H
+
+#include <pthread.h>
+#include "definiciones.h"
+#include "utilidades.h"
+#include "snmpdef.h"
+#include "modBD.h"
+#include "email.h"
+
+
+//Definiciones
+#define MAX_BUFFER_SIZE 20
+#define NO_MAX_CONEX 50
+
+//Definiciones de opciones de configuracion
+#define ID_NODO "id-nodo"
+#define INTERVALO_MON "intervalo-monitoreo"
+#define INTERVALO_MON_PUERTA "intervalo-mon-puerta"
+#define ARCHIVO_COL_BD "archivo-columnas-BD"
+#define IP_SERVIDOR_SNMP "ip-servidor-snmp"
+#define COMUNIDAD_SNMP "comunidad-snmp"
+#define SESION_SNMP "nombre-sesion-snmp"
+#define BASE_DE_DATOS "nombre-base-de-datos"
+#define IP_SERVIDOR_BASE_DE_DATOS "ip-base-de-datos"
+#define USUARIO_BASE_DE_DATOS "usuario-base-de-datos"
+#define CLAVE_BASE_DE_DATOS "clave-base-de-datos"
+#define PUERTO_BASE_DE_DATOS "puerto-base-de-datos"
+#define VALORES_MINIMOS_PERMITIDOS "valores-min-permitidos"
+#define DESTINATARIOS_ALERTAS "destinatarios-alertas"
+
+
+//Valore predeterminados de monitoreo
+#define INTERVALO_MON_PUERTA_PRED 500                //milisegundos (medio segundo)
+#define INTERVALO_MON_PRED 300000                   //milisegundos (5 minutos)
+
+
+//Configuracion del monitor
+struct configuracionMonitor{
+    int intervaloMonitoreo;
+    int intervaloMonitoreoPuerta;
+    int longitudValoresPemitidos;
+    int puertoBD;
+    int numeroServidoresSNMP;
+    int numeroValoresMinimosPermitidos;
+    int numeroDestinatariosAlertas;
+    char *id_nodo;
+    char *interfazRed;
+    char *rutaArchivoColumnasBD;
+    char *usuarioBD;
+    char *claveBD;
+    char *ipServidorBD;
+    char *BD;
+    char *comunidadSNMP;
+    char *nombreSesionSNMP;
+    char **ipServidorSNMP;
+    char **valoresMinimosPermitidosMediciones;
+    char **destinatariosAlertas;
+};
+
+
+//Variables globales
+int sd1, sd2;                                     //Descriptores de archivo del socket
+pthread_t localComandosThread, monPuertaThread;   //thread de comandos
+pid_t processID;                                  //Nuestro pid
+struct nodo informacion_nodo;                     //Informacion del nodo
+netsnmp_session *ss;                              //Sesion SNMP
+struct configuracionMonitor* configuracion;       //configuracion del monitor
+
+//Definicion de funciones
+
+void salir(int status);
+
+void *manejarComandosControlador(void *sd);
+
+void *monitorPuerta(void *sd);
+
+void *recComandosEnvResp(void *ptr);
+
+void manejadorSenalSIGTERMSIGINT(int sig);
+
+int procesarComando(int fd, struct comando *com);
+
+struct configuracionMonitor* leerArchivoConfiguracion(char *rutaArchivo);
+
+char **obtenerValorConfig(char *linea, int *numeroValores);
+
+
+#endif
+

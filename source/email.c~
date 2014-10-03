@@ -1,0 +1,70 @@
+#include "email.h"
+
+
+
+int enviarEMail(char **destinatarios, int numeroDest, char *asunto, char* de, char *mensaje){
+    
+    char *contenidoArchivo = malloc(sizeof(char)*TAMANO_MAX_EMAIL);
+    
+    if(contenidoArchivo == NULL){
+        printf("ERROR: No se pudo crear el e-mail\n");
+        return -1;
+    }
+    
+    //Creamos el archivo con los datos
+    int total = 0;
+    memset(contenidoArchivo, 0, TAMANO_MAX_EMAIL);
+    
+    strcat(contenidoArchivo,"To: ");
+    
+    int i;
+    
+    for(i=0; i < numeroDest; i++){
+        
+        strcat(contenidoArchivo, destinatarios[i]);
+        
+        if(i < numeroDest - 1){
+            strcat(contenidoArchivo, ";");
+        }
+        else strcat(contenidoArchivo,"\n");
+    }
+    
+    strcat(contenidoArchivo, "From: ");
+    strcat(contenidoArchivo, de);
+    strcat(contenidoArchivo, "\n");
+    strcat(contenidoArchivo, "Subject: ");
+    strcat(contenidoArchivo, asunto);
+    strcat(contenidoArchivo, "\n\n");
+    strcat(contenidoArchivo, mensaje);
+    strcat(contenidoArchivo, "\0");
+    
+    printf("%s\n", contenidoArchivo);
+    
+    //escribimos el archivo
+    FILE *archivoEmail = fopen(ARCHIVO_EMAIL_TEMPORAL, "w");
+    
+    fwrite(contenidoArchivo, 1, strlen(contenidoArchivo),archivoEmail);
+    fflush(archivoEmail);
+    free(contenidoArchivo);
+    
+    //Creamos el comando
+    char *comando = malloc(sizeof(char)*TAMANO_MAX_EMAIL);
+    memset(comando, 0, TAMANO_MAX_EMAIL);
+    if(comando == NULL){
+        printf("ERROR: No se pudo crear el comando de envio de e-mail\n");
+        return -1;
+    }
+    
+    strcat(comando, "/usr/sbin/ssmtp -v ");
+    strcat(comando, destinatarios[0]);
+    strcat(comando, " < ");
+    strcat(comando, ARCHIVO_EMAIL_TEMPORAL);
+    strcat(comando,"\0");
+    
+    printf("%s\n", comando);
+    system(comando);
+    free(comando);
+    
+    
+}
+

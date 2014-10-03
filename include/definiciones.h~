@@ -1,0 +1,139 @@
+#ifndef DEFINICIONES_H
+#define DEFINICIONES_H
+
+#include <stdio.h>
+#include <signal.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <string.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <dirent.h>
+#include <time.h>
+#include <sys/file.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <ifaddrs.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+#include <mysql.h>
+#include <net-snmp/net-snmp-config.h>
+#include <net-snmp/net-snmp-includes.h>
+#include <net-snmp/agent/net-snmp-agent-includes.h>
+
+//#define DEBUG
+
+#ifndef NI_MAXHOST
+#define NI_MAXHOST 1025
+#endif
+
+#ifndef NI_NUMERICHOST
+#define NI_NUMERICHOST 1025
+#endif
+
+//Tamanos
+#define MAX_TAMANO_ENTRADA 30
+#define TAMANO_MAX_RESPUESTA 2048
+#define LONGITUD_MAX_IP 16;
+
+
+#define ARCHIVO_PROCESS_ID_DAEMON "pidDaemon"
+#define ARCHIVO_PROCESS_ID_CONT "pidCont"
+#define COMANDO_REMOVER_ARCHIVO "rm -rf "
+
+//Directorios
+#define DIRECTORIO_DE_TRABAJO "/tmp"
+#define ARCHIVO_SOCKET_IPC "/tmp/socketcom"
+
+//Parametros SNMP
+#define INTERFAZ_RED_PRINCIPAL "eth"
+#define PUERTO_TRAP_SNMP 162
+
+//Comando-Respuesta
+#define COMANDO 99999
+#define RESPUESTA 66666
+#define ACK 33333
+
+//Strings de comandos validos
+#define SALIR_DAEMON_STR "cerrar monitor\n"
+#define INFORMACION_NODO_STR "info nodo\n"
+#define ACTIVAR_RELE_STR "enceder rele\n"
+#define DESACTIVAR_RELE_STR "apagar rele\n"
+#define INFORMACION_CONF_STR "info configuracion\n"
+#define INFORMACION_VALORES_MIN_STR "info minimos mediciones\n"
+
+#define MILISEGUNDOS_POR_MINUTO 60000
+
+
+//Estructuras
+//Medicion
+struct medicion{
+    int id_medicion;
+    int valor;
+    struct tm tiempo;
+};
+
+//Nodo
+struct nodo{
+    char *id;
+    int lon_ip;
+    char *ip;            //IP puede ser de hasta 15 caractares mas caracter nulo
+};
+
+//Comando
+struct comando{
+    int com;
+    int numero_argumentos;
+    int *long_argumentos;               //Añadido...
+    char **argumentos;
+};
+
+//respuesta
+struct respuesta{
+    int status;
+    int long_res;
+    char *res;
+};
+
+
+//Enumeraciones
+enum medidas_sensores { TEMPERATURA_1,
+                        TEMPERATURA_2,
+                        TEMPERATURA_3,
+                        HUMEDAD,
+                        VOLTAJE_DC_1,
+                        VOLTAJE_DC_2,
+                        VOLTAJE_DC_3,
+                        VOTAJE_DC_4,
+                        CORRIENTE_DC_1,
+                        CORRIENTE_DC_2,
+                        CORRIENTE_DC_3,
+                        CORRIENTE_DC_4,
+                        CORRIENTE_AC_1,
+                        CORRIENTE_AC_2,
+                        CORRIENTE_AC_3,
+                        SENSOR_PUERTA_ACCESO,
+                        RELE_1,
+                        RELE_2,
+                        RELE_3
+};
+
+enum comandos{ SALIR_DAEMON,
+               SALIR_CONTROLADOR,
+               INFORMACION_NODO,
+               INFORMACION_CONF,
+               INFORMACION_VAL_MIN,
+               ACTIVAR_RELE,
+               DESACTIVAR_RELE,
+               MOSTRAR_MEDICIONES,
+};
+
+enum status_comando{ OK,
+                     ERROR,    
+};
+
+#endif
+

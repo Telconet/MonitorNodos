@@ -1,0 +1,16 @@
+#ifndef SNMPDEF_H
+#define SNMPDEF_H
+
+#include "definiciones.h"
+
+netsnmp_session *inicializarSistemaSnmp(char *ip_servidor, char *nombre, char *comunidad, int versionSNMP);
+
+int enviarTrap(netsnmp_session *sesion, char *ip_agente, int trapGenerico, int trapEspecifico);
+
+netsnmp_session *abrirSesion(netsnmp_session *sesion);
+
+void cerrarSistemaSnmp(netsnmp_session *sesion);
+
+
+#endif
+
