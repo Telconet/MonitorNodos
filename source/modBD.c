@@ -160,25 +160,33 @@ int eliminarTabla(MYSQL **conexion, char *nombreTabla) {
 int insertarRegistro(char *nombreTabla, char **valores, int numeroValores, status_puerto_DIO stp, status_puerto_DIO sts) {
     int i;
     int cont;
+    
+    int longitudFromUser  = 300;
+    int longitudrecvBuff = 1024;
 
     if (nombreTabla != NULL && valores != NULL && numeroValores > 0) {
         int sockfd = 0, n;
-        char fromUser[300];
-        char recvBuff[1024];
+        char fromUser[longitudFromUser];
+        char recvBuff[longitudrecvBuff];
 
         struct sockaddr_in serv_addr;
         int conn;
 
         if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-            printf("\n Error : Could not create socket \n");
-            return 1;
+            perror("\n Error : No se pudo crear el socket\n");
+            return -1;
         }
+        
+        //llenamos los buffers de ceros.
+        memset(fromUser, 0, longitudFromUser);
+        memset(recvBuff, 0, longitudrecvBuff);
+        
 
         strcpy(fromUser, valores[0]);
         for (i = 1; i < numeroValores; i++) {
-            sprintf(fromUser, "%s,%s", fromUser, valores[i]);
+            snprintf(fromUser, longitudFromUser, "%s,%s", fromUser, valores[i]);
         }
-        sprintf(fromUser, "%s,%d,%d\n", fromUser,stp,sts);
+        sprintf(fromUser, longitudFromUser, "%s,%d, %d\n", fromUser, stp, sts);
         //printf("\nQuery: '%s'->%d\n", fromUser, strlen(fromUser));
 
         serv_addr.sin_family = AF_INET;
@@ -187,7 +195,7 @@ int insertarRegistro(char *nombreTabla, char **valores, int numeroValores, statu
 
         conn = connect(sockfd, (struct sockaddr *) &serv_addr, sizeof (serv_addr));
         if (conn < 0) {
-            printf("\n Error : Connect Failed \n");
+            perror("\n Error : Conexion fallida\n");
             close(sockfd);
             return -1;
         }
