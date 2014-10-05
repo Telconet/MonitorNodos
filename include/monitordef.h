@@ -9,6 +9,7 @@
 #include "mediciones.h"
 #include "ADC.h"
 #include "DIO.h"
+#include "IPC.h"
 
 
 //Definiciones
@@ -96,13 +97,15 @@ pthread_mutex_t mutexEmailsAlerta;                                 //Mutex para 
 
 void salir(int status);
 
-void *manejarComandosControlador(void *sd);
+//Todos estos tenian tipo void * en vez de void
+void manejarComandosControlador(void *sd);
 
-void *temporizadorEnvioEmails(void *sd);
+void temporizadorEnvioEmails(void *sd);
 
-void *monitorPuerta(void *sd);
+void monitorPuerta(void *sd);
 
-void *recComandosEnvResp(void *ptr);
+void recComandosEnvResp(void *ptr);
+//...
 
 void manejadorSenalSIGTERMSIGINT(int sig);
 

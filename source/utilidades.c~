@@ -16,6 +16,12 @@ void reportarPID(char *archivoProceso, int processID){
 #ifdef DEBUG
         printf("Linea %d: Error al abrir/crear archivo. Error %d. Saliendo...\n", __LINE__, errno);
 #endif
+    
+        //Removemos el archivo con el pid    
+        char comandoRemover[strlen(ARCHIVO_PROCESS_ID_DAEMON) + strlen(COMANDO_REMOVER_ARCHIVO)];
+        strcpy(comandoRemover, COMANDO_REMOVER_ARCHIVO);
+        strcat(comandoRemover, ARCHIVO_PROCESS_ID_DAEMON);
+        system(comandoRemover);
         exit(1);
     }
     
@@ -65,6 +71,12 @@ void verificarProgramaNoCorriendo(char *archivoProceso){
         pid = atoi(processIDStr);
         printf("ERROR: Ya esta corriendo una instancia del daemon de monitoreo PID: %d\n", pid);
         close(fd);
+        
+        //Removemos el archivo con el pid    
+        char comandoRemover[strlen(ARCHIVO_PROCESS_ID_DAEMON) + strlen(COMANDO_REMOVER_ARCHIVO)];
+        strcpy(comandoRemover, COMANDO_REMOVER_ARCHIVO);
+        strcat(comandoRemover, ARCHIVO_PROCESS_ID_DAEMON);
+        system(comandoRemover);
         exit(1);
     }
     return;
@@ -91,14 +103,22 @@ int buscarArchivoPIDProceso(char *archivoProceso){
         int pid = 0;
         int numbytes = pread(fd, processIDStr, 4, 0);
         
-        if(numbytes == 4){           
+        //printf("Hola 2\n");
+        
+        if(numbytes > 0){           
             pid = atoi(processIDStr);
+            //printf("hola 3");
             return pid;
         }
         else{
 #ifdef DEBUG
             printf("Linea %d: Error al convertir el PID\n", __LINE__);
 #endif
+            //Removemos el archivo con el pid    
+            char comandoRemover[strlen(ARCHIVO_PROCESS_ID_DAEMON) + strlen(COMANDO_REMOVER_ARCHIVO)];
+            strcpy(comandoRemover, COMANDO_REMOVER_ARCHIVO);
+            strcat(comandoRemover, ARCHIVO_PROCESS_ID_DAEMON);
+            system(comandoRemover);
             exit(1);
         }
     }
@@ -137,7 +157,6 @@ int parse_IP(char *ip_string, unsigned char *ip)
     int index_octet = 0;
     int index_ip_string = 0;
     int index_parsed_ip = 0;
-    int index = 0;
     
     
     while(1){
@@ -218,7 +237,7 @@ int obtenerIPHost(char *host, int maxhost){
 char *obtenerInterfazDeRed(void){
     
     struct ifaddrs *ifaddr, *ifa;
-    int family, s;
+    int family;
     
     //Obtener informacion de interfaz
     if (getifaddrs(&ifaddr) == -1) {
@@ -249,6 +268,157 @@ char *obtenerInterfazDeRed(void){
     return NULL;
 }
 
+
+/**
+ *Obtiene la hora actual
+ */
+char *obtenerHora(void){
+    
+    time_t tiempoBruto;
+
+    //Tiempo en segundos desde espoca (Enero 1 1970 00:00)    
+    time(&tiempoBruto);
+    
+    struct tm *tiempo = localtime(&tiempoBruto);
+    
+    char *hora = malloc(sizeof(char)*12);
+    char *tmp = malloc(sizeof(char)*3);
+    
+    memset(hora, 0, 12);
+    
+    //sprintf(hora, "%d:%d:%d", tiempo->tm_hour + ZONA_HORARIA_ACTUAL, tiempo->tm_min, tiempo->tm_sec);
+    
+    memset(tmp, 0, 3);
+    
+    
+    if(tiempo == NULL){
+        printf("ERROR: No se pudo obtener el tiempo actual.\n");
+    }
+    
+    //Hora
+    if(tiempo->tm_hour <= 9){
+        strcat(hora, "0");        
+        sprintf(tmp, "%d", tiempo->tm_hour); //+ ZONA_HORARIA_ACTUAL
+        strcat(hora, tmp);
+    }
+    else{
+            sprintf(tmp, "%d", tiempo->tm_hour);
+            strcat(hora, tmp);
+        
+    }
+    
+    strcat(hora, ":");
+    memset(tmp, 0, 3);
+    
+    //Minutos
+    if(tiempo->tm_min <= 9){
+        strcat(hora, "0");
+        sprintf(tmp, "%d", tiempo->tm_min);
+        strcat(hora, tmp);
+    }
+    else{
+            sprintf(tmp, "%d", tiempo->tm_min);
+            strcat(hora, tmp);
+    }
+    
+    strcat(hora, ":");
+    memset(tmp, 0, 3);
+    
+    //Segundos
+    if(tiempo->tm_sec <= 9){
+        strcat(hora, "0");
+        sprintf(tmp, "%d", tiempo->tm_sec);
+        strcat(hora, tmp);
+    }
+    else{
+            sprintf(tmp, "%d", tiempo->tm_sec);
+            strcat(hora, tmp);
+    }
+    
+    free(tmp);
+    return hora;
+}
+
+/**
+ *Obtiene la fecha actual.
+ *
+ */
+char *obtenerFecha(void){
+    
+    time_t tiempoBruto;
+
+    //Tiempo en segundos desde espoca (Enero 1 1970 00:00)    
+    time(&tiempoBruto);
+    
+    struct tm *tiempo = localtime(&tiempoBruto);
+    
+    char *fecha = malloc(sizeof(char)*12);
+    char *tmp = malloc(sizeof(char)*5);
+    
+    memset(fecha, 0, 12);
+    memset(tmp, 0, 5);
+    
+    //Anio
+    sprintf(tmp, "%d", tiempo->tm_year + ANIO_INICIO_EPOCA);
+    strcat(fecha, tmp);
+    strcat(fecha, "-");
+    
+    //Mes
+    memset(tmp, 0, 5);
+    if(tiempo->tm_mon < 9){
+        
+        strcat(fecha, "0");
+        sprintf(tmp, "%d", tiempo->tm_mon + 1);
+        strcat(fecha, tmp);
+    }
+    else{
+            sprintf(tmp, "%d", tiempo->tm_mon + 1);
+            strcat(fecha, tmp);
+    }
+    strcat(fecha, "-");
+    
+    //dia
+    memset(tmp, 0, 5);
+    if(tiempo->tm_mday < 10){
+        
+        strcat(fecha, "0");
+        sprintf(tmp, "%d", tiempo->tm_mday);
+        strcat(fecha, tmp);
+    }
+    else{
+            sprintf(tmp, "%d", tiempo->tm_mday);
+            strcat(fecha, tmp);
+    }
+    
+    free(tmp);
+    return fecha;
+}
+
+
+/**
+ *Obtiene el año actual
+ */
+char *obtenerAnio(void){
+    
+    time_t tiempoBruto;
+
+    //Tiempo en segundos desde espoca (Enero 1 1970 00:00)    
+    time(&tiempoBruto);
+    
+    struct tm *tiempo = localtime(&tiempoBruto);
+    
+    char *anio = malloc(sizeof(char)*10);
+    
+    if(anio == NULL){
+        return NULL;
+    }
+    
+    memset(anio, 0, 10);
+    sprintf(anio, "%d", (tiempo->tm_year + ANIO_INICIO_EPOCA));
+    
+    return anio;
+}
+
 /**
  *Rutina para liberar arreglo de strings
  */
@@ -260,10 +430,11 @@ void liberarMemoria(void **bloque, int numeroElementos){
 #endif
     for(i = 0; i < numeroElementos; i++){
         free(bloque[i]);
+        //printf("Liberado bloque %d: i\n", i);
     }
+    
+    free(bloque);
 }
-
-
 
 
 

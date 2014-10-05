@@ -2,6 +2,7 @@
 #define SNMPDEF_H
 
 #include "definiciones.h"
+#include "utilidades.h"
 
 netsnmp_session *inicializarSistemaSnmp(char *ip_servidor, char *nombre, char *comunidad, int versionSNMP);
 

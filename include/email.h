@@ -11,7 +11,7 @@ int enviarEMail(char *destinatario, char *asunto, char* de, char *mensaje);
 
 void enviarMultiplesEmails(char **destinatarios, int numeroDestinatarios, char *asunto, char *de, char *mensaje);
 
-void *funcionEnvioEmail(void *ptr);
+void funcionEnvioEmail(void *ptr);
 
 #endif
 

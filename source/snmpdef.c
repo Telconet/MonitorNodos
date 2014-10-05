@@ -97,6 +97,7 @@ int enviarTrap(netsnmp_session *sesion, char *ip_agente, int trapGenerico, int t
 
     oid anOID[MAX_OID_LEN];
     size_t anOID_len;
+
     
     //Creamos el trap
     pdu = snmp_pdu_create(SNMP_MSG_TRAP);
@@ -130,6 +131,8 @@ int enviarTrap(netsnmp_session *sesion, char *ip_agente, int trapGenerico, int t
     int longString = 200;
     char *valorStr = malloc(sizeof(char)*longValor);
     
+    memset(valorStr, 0, longValor);
+    
     if(OID != NULL){
         if (!snmp_parse_oid(OID, anOID, &anOID_len)) {
           snmp_perror(OID);
@@ -147,22 +150,22 @@ int enviarTrap(netsnmp_session *sesion, char *ip_agente, int trapGenerico, int t
         //anadimos oid
         switch(trapEspecifico){
             case TRAP_CORRIENTE_AC_ALTA:
-                snprintf(valorStr, longValor, "%.2f A");
+                snprintf(valorStr, longValor, "%.2f A", valor);
                 break;
             case TRAP_CORRIENTE_DC_ALTA:
-                snprintf(valorStr, longValor, "%.2f A");
+                snprintf(valorStr, longValor, "%.2f A", valor);
                 break;
             case TRAP_VOLTAJE_DC_BAJO:
-                snprintf(valorStr, longValor, "%.2f V");
+                snprintf(valorStr, longValor, "%.2f V", valor);
                 break;
             case TRAP_HUMEDAD_ALTA:
-                snprintf(valorStr, longValor, "%.2f %% HR");
+                snprintf(valorStr, longValor, "%.2f %% HR", valor);
                 break;
             case TRAP_TEMPERATURA_ALTA:
-                snprintf(valorStr, longValor, "%.2f %% HR");
+                snprintf(valorStr, longValor, "%.2f %% HR", valor);
                 break;
             case TRAP_VOLTAJE_AC_BAJO:
-                snprintf(valorStr, longValor, "%.2f V RMS");        //check
+                snprintf(valorStr, longValor, "%.2f V RMS", valor);        //check
                 break;
             case TRAP_GENERADOR:
                 snprintf(valorStr, longString, "Generador encendido.");
@@ -187,6 +190,7 @@ int enviarTrap(netsnmp_session *sesion, char *ip_agente, int trapGenerico, int t
     
     //TODO LIBERAR el PDU!!!!!!!!!! PROBAR -> Estamos liberando dos veces... snmp_send libera el PDU
     //snmp_free_pdu(pdu);
+    return status;
 
 }
 

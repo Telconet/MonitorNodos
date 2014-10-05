@@ -152,7 +152,7 @@ int liberarListaMediciones(struct medicion *lista) {
         free(poreliminar);
     }
 
-    return 1;
+    return 0;
 }
 
 /**
@@ -189,7 +189,7 @@ int realizarMediciones(volatile struct medicion **med) { //CHECK!!!!!!!!!
     //correspondiente.
     if (med != NULL) {
         int i = 0;
-        int numeroCanales = 24;
+        //int numeroCanales = 24;
         int freqMuestreo = 1000;
 
         //Ya que los canales se leen en pares
@@ -302,7 +302,7 @@ int realizarMediciones(volatile struct medicion **med) { //CHECK!!!!!!!!!
         free(data_canal_1);
         free(data_canal_2);
 
-        return 1;
+        return 0;
     } else return -1;
 
 }
@@ -773,14 +773,14 @@ int almacenarMediciones(volatile struct medicion **med, char *nombreNodo, char *
         //liberamos el tipo de columnas.
         liberarMemoria(tipoColumnas, numeroColumnas); //ok
 
-        return 1;
+        return 0;
 
     } else {
         printf("Error al almacenar mediciones.\n");
         return -1;
     }
 
-    return 1;
+    return 0;
 }
 
 /**
@@ -788,8 +788,8 @@ int almacenarMediciones(volatile struct medicion **med, char *nombreNodo, char *
  */
 int almacenarEvento(char *dispositivo, char *nombreNodo, char *rutaArchivoTipoColumnas, char *evento, char *notas) {
 
-    MYSQL *conexion = conectarBD(configuracion->ipServidorBD, configuracion->usuarioBD, configuracion->claveBD, configuracion->BD);
-
+    //MYSQL *conexion = conectarBD(configuracion->ipServidorBD, configuracion->usuarioBD, configuracion->claveBD, configuracion->BD);
+    /*
     if (dispositivo != NULL && conexion != NULL && nombreNodo != NULL && evento != NULL && dispositivo != NULL) {
 
         //Primero creamos el nombre de la tabla
@@ -850,7 +850,10 @@ int almacenarEvento(char *dispositivo, char *nombreNodo, char *rutaArchivoTipoCo
         cerrarBD(&conexion);
 
         return 1;
-    } else return -1;
+    } else return -1;*/
+    
+    //TODO: necesario reimplementar (ya no escribimos a base de datos directamente)
+    return 0;
 }
 
 /**
@@ -965,7 +968,7 @@ int desactivarRele(int numeroRele, char *nombreNodo, char *rutaArchivoTipoColumn
 
         if (buffer == NULL) {
             printf("ERROR: No se pudo registrar el evento de desactivacion de rele.\n");
-            return 1; //Se pudo desactivar el rele, pero no almacenar el evento. Usamos otros codigo
+            return -1; //Se pudo desactivar el rele, pero no almacenar el evento. Usamos otros codigo
         }
 
         memset(buffer, 0, 20);
@@ -1070,7 +1073,7 @@ float voltajeACorrienteDC(float voltaje) {
     float voltioPorAmperio = 0.02000f;
 
     //Hasta 100A
-    corrienteDC = (voltaje - 2.5000f) / 0.0200f;
+    corrienteDC = (voltaje - 2.5000f) / voltioPorAmperio; //0.02000f
 
     return corrienteDC;
 }
@@ -1084,8 +1087,6 @@ float voltajeACorrienteDC(float voltaje) {
 float voltajeACorrienteAC(uint16_t *voltajes, int numeroMuestras, adcrange rango) {
 
     float corrienteAC = -1.0f;
-    float max = 2.5f;
-    float min = 2.5f;
     float valor = 0.0f;
     int i = 0;
 

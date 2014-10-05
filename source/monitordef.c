@@ -40,10 +40,9 @@ void salir(int status){
  *El thread principal creará worker threads para
  *manejar las peticiones de cada controlador.
  */
-void *manejarComandosControlador(void *sd){
+void manejarComandosControlador(void *sd){
     
     char mensaje[MAX_BUFFER_SIZE];
-    int tRet;
     int bytes_recibidos = -1;                        //????
     int *sd_intptr = (int *)sd;                    //el file descriptor, convertimos a int *
     int sid2 = *sd_intptr;                           //obtenemos el valor apuntado por el puntero
@@ -117,7 +116,7 @@ void *manejarComandosControlador(void *sd){
 /**
  *Rutina que se encarga de llevar el control de cuando se deben enviar las alertas.
  */
-void *temporizadorEnvioEmails(void *sd){
+void temporizadorEnvioEmails(void *sd){
     
     struct configuracionMonitor *conf = (struct configuracionMonitor *)sd;
     int tiempoEmails = conf->periodoEnvioEmails;
@@ -130,7 +129,8 @@ void *temporizadorEnvioEmails(void *sd){
     sleep(3*periodoSleep);
     
     int i;
-    volatile struct medicion *listaMedicionesTemporal = listaMediciones;
+    //volatile struct medicion *listaMedicionesTemporal = listaMediciones;
+    
     //Entramos al lazo
     while(1){
         
@@ -169,7 +169,7 @@ void *temporizadorEnvioEmails(void *sd){
  *0V   --> PUERTA CERRADA     (con circuito pull-up)
  *3.3V --> PUERTA ABIERTA
  */
-void *monitorPuerta(void *sd){
+void monitorPuerta(void *sd){
     
     struct configuracionMonitor *conf = (struct configuracionMonitor *)sd;
     int intervaloMonitoreo = conf->intervaloMonitoreoPuerta;
@@ -271,10 +271,10 @@ void *monitorPuerta(void *sd){
  *Funcion que manejara el envio y recepcion de comandos
  *mediante Unix sockets. Correrá en un thread individual.
  */
-void *recComandosEnvResp(void *ptr)
+void recComandosEnvResp(void *ptr)
 {
     struct sockaddr_un local, remoto;
-    int tamano_local, tamano_remoto, bytes_recibidos ,fin;
+    int tamano_local, tamano_remoto;
     int tRet;
     pthread_t peticiones_thread;
 
@@ -341,7 +341,7 @@ void *recComandosEnvResp(void *ptr)
         
         //Aqui manejamos las peticiones de los controladores
         //en un nuevo thread    
-        tRet = pthread_create(&peticiones_thread, NULL, manejarComandosControlador, &sd2);
+        tRet = pthread_create(&peticiones_thread, NULL, (void *)manejarComandosControlador, &sd2);
     }
 }
 
@@ -609,7 +609,7 @@ int procesarComando(int fd, struct comando *com)
                      "Temperatura 1: %s C\n"
                      "Temperatura 2: %s C\n"
                      "Temperatura 3: %s C\n"
-                     "Humedad: %s % HR\n"
+                     "Humedad: %s %% HR\n"
                      "Voltaje DC 1: %s V\n"
                      "Voltaje DC 2: %s V\n"
                      "Voltaje DC 3: %s V\n"
@@ -624,7 +624,7 @@ int procesarComando(int fd, struct comando *com)
                      "Corriente AC 4: %s A\n"
                      "Voltaje AC 1: %s V\n"
                      "Voltaje AC 2: %s V\n",
-                     informacion_nodo.id,
+                    informacion_nodo.id,
                     configuracion->valoresMinimosPermitidosMediciones[1],
                     configuracion->valoresMinimosPermitidosMediciones[5],
                     configuracion->valoresMinimosPermitidosMediciones[9],
@@ -643,7 +643,6 @@ int procesarComando(int fd, struct comando *com)
                     configuracion->valoresMinimosPermitidosMediciones[6],
                     configuracion->valoresMinimosPermitidosMediciones[12],
                     configuracion->valoresMinimosPermitidosMediciones[15]);
-            
             res.status = OK;
             res.res = buffer;
             res.long_res = strlen(buffer);
@@ -684,7 +683,7 @@ int procesarComando(int fd, struct comando *com)
                          "Temperatura 1: %.2f C\n"
                          "Temperatura 2: %.2f C\n"
                          "Temperatura 3: %.2f C\n"
-                         "Humedad: %.2f % HR\n"
+                         "Humedad: %.2f %% HR\n"
                          "Voltaje DC 1: %.2f V\n"
                          "Voltaje DC 2: %.2f V\n"
                          "Voltaje DC 3: %.2f V\n"
@@ -723,7 +722,7 @@ int procesarComando(int fd, struct comando *com)
                          "Temperatura 1: %.2f C\n"
                          "Temperatura 2: %.2f C\n"
                          "Temperatura 3: %.2f C\n"
-                         "Humedad: %.2f % HR\n"
+                         "Humedad: %.2f %% HR\n"
                          "Voltaje DC 1: %.2f V\n"
                          "Voltaje DC 2: %.2f V\n"
                          "Voltaje DC 3: %.2f V\n"
@@ -763,7 +762,7 @@ int procesarComando(int fd, struct comando *com)
                          "Temperatura 1: %.2f C\n"
                          "Temperatura 2: %.2f C\n"
                          "Temperatura 3: %.2f C\n"
-                         "Humedad: %.2f % HR\n"
+                         "Humedad: %.2f %% HR\n"
                          "Voltaje DC 1: %.2f V\n"
                          "Voltaje DC 2: %.2f V\n"
                          "Voltaje DC 3: %.2f V\n"
@@ -804,7 +803,7 @@ int procesarComando(int fd, struct comando *com)
                          "Temperatura 1: %.2f C\n"
                          "Temperatura 2: %.2f C\n"
                          "Temperatura 3: %.2f C\n"
-                         "Humedad: %.2f % HR\n"
+                         "Humedad: %.2f %% HR\n"
                          "Voltaje DC 1: %.2f V\n"
                          "Voltaje DC 2: %.2f V\n"
                          "Voltaje DC 3: %.2f V\n"

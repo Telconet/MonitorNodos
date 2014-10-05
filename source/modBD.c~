@@ -1,412 +1,125 @@
 #include "modBD.h"
 
-/**
- *Crear una conexion a una base de datos existente
- */
-MYSQL *conectarBD(char *servidor, char *usuario, char *clave, char *BD){
-    
-        MYSQL *conexion = mysql_init(NULL);
-        
-        if(conexion == NULL){
-            printf("Error al abrir la base de datos. Este programa se cerrara\n");
-            exit(1);
-        }
-        
-        
-        if(mysql_real_connect(conexion, servidor, usuario, clave, BD, 0, NULL, 0) == NULL){
-            printf("Error %u: %s\n", mysql_errno(conexion), mysql_error(conexion));
-            exit(1);   
-        }
-        
-        return conexion;
-}
 
-/**
- *Cierra la conexion a la base de datos;
- */
-int cerrarBD(MYSQL **conexion){
-    if(conexion != NULL){
-        mysql_close((*conexion));
-    }
-    return 0;
-}
-
-/**
- *Rutina que crea una tabla, asumiendo que la conexion ya este abierta
- */
-int crearTabla(MYSQL **conexion, char *nombreTabla, char **tipoColumnas, int numeroColumnas){
-    
-    if((*conexion) != NULL && tipoColumnas != NULL && numeroColumnas > 0){
-        char stringConsulta[BUFFER_CONSULTA_MAX];
-        
-        //Ponemos en cero el string de la consulta
-        memset(stringConsulta, 0 , BUFFER_CONSULTA_MAX);
-        
-        strcat(stringConsulta,  "CREATE TABLE ");
-        strcat(stringConsulta,  nombreTabla);
-        strcat(stringConsulta,  " (");
-
-        int i;
-        
-        for(i = 0; i < numeroColumnas; i++){
-            strcat(stringConsulta, tipoColumnas[i]);
-            
-            if(i < numeroColumnas - 1){
-                strcat(stringConsulta, ", ");
-            }
-            else{
-                strcat(stringConsulta, ")");
-            }
-        }
-        strcat(stringConsulta, "ENGINE=INNODB");
-        strcat(stringConsulta, "\0");
-#ifdef DEBUG
-        printf("numero columnas crear tabla: %d\n", numeroColumnas);
-        printf("\n");
-        printf("Consulta: %s\n\n", stringConsulta);
-        printf("Longitud consulta: %u\n",  strlen(stringConsulta));
-#endif
-
-        if(mysql_query((*conexion), stringConsulta)){
-            printf("Error %u: %s\n", mysql_errno((*conexion)), mysql_error((*conexion)));
-            return -1;
-        }
-        
-        return 1;
-    }
-    return -1;
-}
-
-
-
-/**
- *Rutina que elimina un tabla de la base de datos
- */
-int eliminarTabla(MYSQL **conexion, char *nombreTabla){
-    
-    if((*conexion) != NULL & nombreTabla != NULL){
-        char stringConsulta[BUFFER_CONSULTA_MAX];
-        
-        //Ponemos en cero el string de la consulta
-        memset(stringConsulta, 0 , BUFFER_CONSULTA_MAX);
-        
-        strcat(stringConsulta, "DROP TABLE ");
-        strcat(stringConsulta, nombreTabla);
-        
-        if(mysql_query((*conexion), stringConsulta)){
-            printf("Error %u: %s\n", mysql_errno((*conexion)), mysql_error((*conexion)));
-            return -1;
-        }
-        
-        return 1;
-    }
-    return -1;
-}
 
 /**
  *Rutina que inserta un registro en la base de datos
  */
-int insertarRegistro(MYSQL **conexion, char *nombreTabla, char **valores, int numeroValores){
+int insertarRegistro(char *nombreTabla, char **valores, int numeroValores, status_puerto_DIO stp, status_puerto_DIO sts) {
+    int i;
+    int cont;
     
-    //***************PRUEBA*******************
-    /*int i = 0;
-        int numeroColumnas = 0;
-        int numTipoColumnas = 0;
+    int longitudFromUser  = 300;
+    int longitudrecvBuff = 1024;
+
+    if (nombreTabla != NULL && valores != NULL && numeroValores > 0) {
+        int sockfd = 0, n;
+        char fromUser[longitudFromUser];
+        char recvBuff[longitudrecvBuff];
+
+        struct sockaddr_in serv_addr;
+        int conn;
+
+        if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+            perror("\n Error : No se pudo crear el socket\n");
+            return -1;
+        }
         
-        printf("Entrando a insertarRegistro\n");
-        
-        //Obtenemos el numero de columnas
-        char **columnas = obtenerNombreColumnas(conexion, nombreTabla, &numeroColumnas);
-        //char **tipoColumnas = obtenerTipoColumnas(conexion, nombreTabla, &numTipoColumnas);
-        
-        if(columnas == NULL) printf("tipoColumnas es NULL \n");
-        
-        for(i = 0; i< numeroColumnas; i++){
-            printf("%s\n", columnas[i]);
-        }*/
-        
-    //*****************PRUEBA******************        
-    if((*conexion) != NULL & nombreTabla != NULL && valores != NULL && numeroValores > 0){
-        
-        char stringConsulta[BUFFER_CONSULTA_MAX];
-        
-        //Ponemos en cero el string de la consulta
-        memset(stringConsulta, 0 , BUFFER_CONSULTA_MAX);
-        
-        strcat(stringConsulta, "INSERT INTO ");
-        strcat(stringConsulta, nombreTabla);
-        strcat(stringConsulta, " (");
-        
-        int i = 0;
-        int numeroColumnas = 0;
-        int numTipoColumnas = 0;
-        
-        //Obtenemos el numero de columnas
-        char **columnas = obtenerNombreColumnas(conexion, nombreTabla, &numeroColumnas);            //?? posible falla?
-        char **tipoColumnas = obtenerTipoColumnas(conexion, nombreTabla, &numTipoColumnas);         //posible falla?
+        //llenamos los buffers de ceros.
+        memset(fromUser, 0, longitudFromUser);
+        memset(recvBuff, 0, longitudrecvBuff);
         
 
-        if(columnas == NULL){
-            liberarMemoria(columnas,numeroColumnas);
-            liberarMemoria(tipoColumnas,numTipoColumnas);
-            return -1;
+        strcpy(fromUser, valores[0]);
+        for (i = 1; i < numeroValores; i++) {
+            snprintf(fromUser, longitudFromUser, "%s,%s", fromUser, valores[i]);
         }
-        
-        if(tipoColumnas == NULL){
-            liberarMemoria(columnas,numeroColumnas);
-            liberarMemoria(tipoColumnas,numTipoColumnas);
-            return -1;
-        }
-        
-        
-        //Creamos el string de la consulta
-        for(i = 0; i < numeroColumnas; i++){
+        sprintf(fromUser, longitudFromUser, "%s,%d, %d\n", fromUser, stp, sts);
+        //printf("\nQuery: '%s'->%d\n", fromUser, strlen(fromUser));
 
-            strcat(stringConsulta, columnas[i]);
-            
-            if(i < numeroColumnas - 1){
-                strcat(stringConsulta, ", ");
-            }
-            else{
-                strcat(stringConsulta, ") VALUES (");
-            }
-        }
-        
-        //Concatenamos los valores a ser ingresados
-        for(i = 0; i < numeroValores; i++){
-            
-#ifdef DEBUG
-            printf("%s - linea %d: tipo de columna: %s\n", __FILE__, __LINE__,tipoColumnas[i]);
-#endif            
-            if(necesitaApostrofe(tipoColumnas[i])){
-                strcat(stringConsulta, "\'");
-                strcat(stringConsulta, valores[i]);
-                strcat(stringConsulta, "\'");
-            }
-            else strcat(stringConsulta, valores[i]);
-            
-            if(i < numeroValores - 1){
-                strcat(stringConsulta, ", ");
-            }
-            else{
-                strcat(stringConsulta, ")");
-            }
-        }
-#ifdef DEBUG
-        printf("Consulta: %s\n", stringConsulta);
-        printf("Longitud consulta: %d\n", strlen(stringConsulta));
-#endif
-        //Ejecutamos la consulta
-        if(mysql_query((*conexion), stringConsulta)){
-            printf("Error %u: %s\n", mysql_errno((*conexion)), mysql_error((*conexion)));
+        serv_addr.sin_family = AF_INET;
+        serv_addr.sin_port = htons(5000);
+        serv_addr.sin_addr.s_addr = inet_addr("172.40.0.10");
+
+        conn = connect(sockfd, (struct sockaddr *) &serv_addr, sizeof (serv_addr));
+        if (conn < 0) {
+            perror("\n Error : Conexion fallida\n");
+            close(sockfd);
             return -1;
         }
-        
-        for(i = 0; i < numeroColumnas; i++){
-           free(columnas[i]);
+
+        cont = 0;
+        while ((n = read(sockfd, recvBuff, sizeof (recvBuff) - 1)) > 0) {
+            recvBuff[n - 1] = '\0';
+            printf("\nRcv: '%s'", recvBuff);
+            if(strcmp(recvBuff, "Inicio")==0){
+                write(sockfd, fromUser, strlen(fromUser));
+            }else if(strcmp(recvBuff, "OK")==0){
+                break;
+            }else{
+                cont++;
+                if(cont>3){
+                    break;
+                }else{
+                    write(sockfd, fromUser, strlen(fromUser));
+                }
+            }
         }
-        free(columnas);
-#ifdef DEBUG
-        printf("%s - linea %d: Memoria de columnas liberada.\n", __FILE__,__LINE__);
-#endif
-        for(i = 0; i < numTipoColumnas; i++){
-           free(tipoColumnas[i]);
-        }
-        free(tipoColumnas);
-#ifdef DEBUG
-        printf("%s - linea %d: Memoria de tipo de columnas liberada.\n", __FILE__,__LINE__);
-#endif
-        return 1;
+        close(sockfd);
+        return 0;
     }
     return -1;
 }
 
-/**
- *Esta rutina lee las columnas de una tabla
- */
-char **obtenerNombreColumnas(MYSQL **conexion, char *nombreTabla, int *numeroColumnas){
-    
-    if((*conexion) != NULL && nombreTabla != NULL){
-        char stringConsulta[BUFFER_CONSULTA_MAX];
-        
-        //Ponemos en cero el string de la consulta
-        memset(stringConsulta, 0 , BUFFER_CONSULTA_MAX);
-        
-        strcat(stringConsulta, "SELECT * FROM ");
-        strcat(stringConsulta, nombreTabla);
-        strcat(stringConsulta, " LIMIT 0,2");
-        
-         if(mysql_query((*conexion), stringConsulta)){
-            printf("Error %u: %s\n", mysql_errno((*conexion)), mysql_error((*conexion)));
-            return NULL;
-        }
-
-        //Obtenemos el resultado de la consulta        
-        MYSQL_RES *resultado = mysql_store_result((*conexion));
-        int numero_campos =  mysql_num_fields(resultado);
-        
-        //Crear el arreglo con los nombres de las columnas
-        char **nombreColumnas = malloc(numero_campos*sizeof(*nombreColumnas));
-
-        if(nombreColumnas != NULL){
-            
-            MYSQL_FIELD *campo;
-            int i = 0;
-            
-            while(campo = mysql_fetch_field(resultado)){
-#ifdef DEBUG                
-                printf("%s\n", campo->name);
-#endif
-                int lonNombre = strlen(campo->name);
-                nombreColumnas[i] = malloc((sizeof(char)*lonNombre) + 1);   //+1?
-                
-                if(nombreColumnas[i] == NULL) return NULL;                          //hubo un fallo grave
-                
-                //Ponemos en cero los contenidos de la memoria
-                memset(nombreColumnas[i], 0 , lonNombre);                   //strncpy error?
-                
-                //copiamos el texto
-                strcpy(nombreColumnas[i], campo->name);
-                i++;
-            }
-            
-            *numeroColumnas = i;                        //devolvemos el numero de columnas
-            
-            mysql_free_result(resultado);                            //liberams la memoria?
-            return nombreColumnas;
-        }
-        
-#ifdef DEBUG
-        printf("Numero de campos de la tabla: %d\n", numero_campos);
-#endif
-    }
-    
-    return NULL;
-}
-
-
-
-/**
- *Rutina que obtiene el tipo de de las columnas de la tabla
- */
-char **obtenerTipoColumnas(MYSQL **conexion, char *nombreTabla, int *numeroColumnas){
-    
-     if((*conexion) != NULL && nombreTabla != NULL){
-        char stringConsulta[BUFFER_CONSULTA_MAX];
-        
-        //Ponemos en cero el string de la consulta
-        memset(stringConsulta, 0 , BUFFER_CONSULTA_MAX);
-        
-        strcat(stringConsulta, "SELECT COLUMN_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE table_name = \'");
-        strcat(stringConsulta, nombreTabla);
-        strcat(stringConsulta, "\'");
-        
-         if(mysql_query((*conexion), stringConsulta)){
-            printf("Error %u: %s\n", mysql_errno((*conexion)), mysql_error((*conexion)));
-            return NULL;
-        }
-
-        //Obtenemos el resultado de la consulta        
-        MYSQL_RES *resultado = mysql_store_result((*conexion));
-        
-        int numero_campos =  mysql_num_fields(resultado);
-        int numero_filas = mysql_num_rows(resultado);                           //numero de filas
-
-#ifdef DEBUG     
-        printf("Numero de campos: %d\n", numero_campos);
-        printf("Numero de filas: %d\n", numero_filas);
-#endif
-        
-        //Crear el arreglo con los nombres de las columnas
-        char **nombreColumnas = malloc(numero_filas*sizeof(*nombreColumnas));              //EPIC FAIL!!!!!!! numero_campos = 1!!!
-        
-        if(nombreColumnas != NULL){
-            
-            MYSQL_ROW fila;
-            int i = 0;
-            
-            while(fila = mysql_fetch_row(resultado)){                       //???   REVISAR
-                
-                unsigned long *lonNombre = mysql_fetch_lengths(resultado);    
-                
-                nombreColumnas[i] = malloc((sizeof(char *)));               //Si no asignamos, tenemor un error donde no retorna los strings.    
-                if(nombreColumnas[i] == NULL) return NULL;                  //hubo un fallo grave
-                
-                char *tmpPtr = nombreColumnas[i];                           //no perdemos la referencia a la memoria?? REVISAR Y PROBAR MINUCIOSAMENTE
-                
-                //copiamos el texto
-                char *w = strdup(fila[0]);                                  //Error al usar free (memoria corrompida)
-                nombreColumnas[i] = w;                                      //aqui se pierde la referencia al malloc anterior inmediato.
-
-                free(tmpPtr);                                               //Pero como tenemos otra referencia, lo recuperamos. REVISAR. POSIBLE CAUSA DE ERROR. PROBAR MINUCIOSAMENTE.
-#ifdef DEBUG
-                printf("%s - linea %d: Tipo columna %d: %s\n", __FILE__,__LINE__, i, nombreColumnas[i]);
-#endif
-                i++;
-            }
-            
-            *numeroColumnas = i;                        //devolvemos el numero de columnas
-            mysql_free_result(resultado);               //liberams la memoria?
-            return nombreColumnas;
-        }
-        
-#ifdef DEBUG
-        //printf("Numero de campos de la tabla: %d\n", numero_campos);
-#endif
-    }
-    
-    return NULL;
-}
 
 /**
  *Rutina que le el tipo de columnas. Usado para la creacion de tablas
  */
-char **leerArchivoTipoColumnas(char *rutaArchivo, int *numeroColumnas){
-    
+char **leerArchivoTipoColumnas(char *rutaArchivo, int *numeroColumnas) {
+
     FILE *archivo = fopen(rutaArchivo, "r");
     char linea[500];
     char **columnas = NULL;
-    
-    if(archivo != NULL){
-        
+
+    if (archivo != NULL) {
+
         //Primera linea es el numero de columans
         int numCol = atoi(fgets(linea, 500, archivo));
-        
-        if(numCol > 0){
+
+        if (numCol > 0) {
             *numeroColumnas = numCol;
-            columnas = malloc(numCol*sizeof(*columnas));        //Asignamos memoria para los punteros
-            
+            columnas = malloc(numCol * sizeof (*columnas)); //Asignamos memoria para los punteros
+
             int i = 0;
 
             //Las siguientes lineas contienen las columnas
-            while(fgets(linea, 500, archivo) != NULL){
-                removerSaltoDeLinea(linea,500);                     //Removemos el salto de linea, y lo cambiamos por el caracter nulo
-                
-                int longitudLinea = strlen(linea) + 1;               //espacio para el caracter nulo
-                columnas[i] = malloc(sizeof(char)*longitudLinea);
-                
+            while (fgets(linea, 500, archivo) != NULL) {
+                removerSaltoDeLinea(linea, 500); //Removemos el salto de linea, y lo cambiamos por el caracter nulo
+
+                int longitudLinea = strlen(linea) + 1; //espacio para el caracter nulo
+                columnas[i] = malloc(sizeof (char) *longitudLinea);
+
                 strncpy(columnas[i], linea, longitudLinea);
                 i++;
-                
             }
             fclose(archivo);
             return columnas;
         }
         return NULL;
-    }
-    else{
+    } else {
+
+        printf("ERROR: No se pudo abrir el archivo: %s\n", rutaArchivo);
         return NULL;
-    }   
+    }
 }
 
 /**
  *Rutina que verifica si el tipo de valor necesita apostro
  */
-int necesitaApostrofe(char *tipo){
-    
-    if(strstr(tipo, "text") != NULL || strstr(tipo, "char") != NULL 
-        || strstr(tipo, "time") != NULL || strstr(tipo, "date") || strstr(tipo, "blob") != NULL){
+int necesitaApostrofe(char *tipo) {
+
+    if (strstr(tipo, "text") != NULL || strstr(tipo, "char") != NULL
+            || strstr(tipo, "time") != NULL || strstr(tipo, "date") || strstr(tipo, "blob") != NULL) {
         return 1;
-    }
-    else return 0;
+    } else return 0;
 }

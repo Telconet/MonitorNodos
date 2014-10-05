@@ -157,7 +157,6 @@ int parse_IP(char *ip_string, unsigned char *ip)
     int index_octet = 0;
     int index_ip_string = 0;
     int index_parsed_ip = 0;
-    int index = 0;
     
     
     while(1){
@@ -238,7 +237,7 @@ int obtenerIPHost(char *host, int maxhost){
 char *obtenerInterfazDeRed(void){
     
     struct ifaddrs *ifaddr, *ifa;
-    int family, s;
+    int family;
     
     //Obtener informacion de interfaz
     if (getifaddrs(&ifaddr) == -1) {

@@ -17,10 +17,9 @@ int enviarEMail(char *destinatario, char *asunto, char* de, char *mensaje){
     }
     
     //Creamos el archivo con los datos
-    int total = 0;
     memset(contenidoArchivo, 0, TAMANO_MAX_EMAIL);
     
-    snprintf(contenidoArchivo, TAMANO_MAX_EMAIL, "To: %s\nFrom: %s\nSubject: %s\n\n%s\0", destinatario, de, asunto, mensaje);
+    snprintf(contenidoArchivo, TAMANO_MAX_EMAIL, "To: %s\nFrom: %s\nSubject: %s\n\n%s", destinatario, de, asunto, mensaje);     //CHECK REMOVi \0!!!
     
     char *nombreArchivo = malloc(sizeof(char)*200);
     memset(nombreArchivo, 0, 200);
@@ -55,10 +54,11 @@ int enviarEMail(char *destinatario, char *asunto, char* de, char *mensaje){
         return -1;
     }
 
+//REMOVI \0!!!
 #ifdef DEBUG
-    snprintf(comando, TAMANO_MAX_EMAIL, "/usr/sbin/ssmtp -v %s < %s &\0", destinatario,nombreArchivo);
+    snprintf(comando, TAMANO_MAX_EMAIL, "/usr/sbin/ssmtp -v %s < %s &", destinatario,nombreArchivo);
 #else
-    snprintf(comando, TAMANO_MAX_EMAIL, "/usr/sbin/ssmtp %s < %s &\0", destinatario,nombreArchivo);
+    snprintf(comando, TAMANO_MAX_EMAIL, "/usr/sbin/ssmtp %s < %s &", destinatario,nombreArchivo);
 #endif
 
     fclose(archivoEmail);
@@ -67,14 +67,16 @@ int enviarEMail(char *destinatario, char *asunto, char* de, char *mensaje){
     pthread_t thread_email;
     int iret1;
     
-    iret1 = pthread_create( &thread_email, NULL, funcionEnvioEmail, (void*) comando);
+    iret1 = pthread_create( &thread_email, NULL, (void *)funcionEnvioEmail, (void*) comando);
+    
+    return iret1;
   
 }
 
 /**
  *funcion que maneja el thread de envio de emails.
  */
-void *funcionEnvioEmail(void *ptr)
+void funcionEnvioEmail(void *ptr)
 {
      char *comando;
      comando = (char *) ptr;

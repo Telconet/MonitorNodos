@@ -1,5 +1,5 @@
-#ifndef IPC_H
-#define IPC_H
+#ifndef ADC_H
+#define ADC_H
 
 #include "definiciones.h"
 #include "tsadclib1624.h"

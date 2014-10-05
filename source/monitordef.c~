@@ -13,7 +13,12 @@ void salir(int status){
     close(sd2);
     
     //Cerramos el sistema SNMP
-    cerrarSistemaSnmp(ss);
+    if(status != EXIT_FAILURE){
+        int i;
+        for(i = 0; i < configuracion->numeroServidoresSNMP; i++){
+            cerrarSistemaSnmp(ss[i]);
+        }
+    }
     
     //Removemos el archivo con el pid    
     char comandoRemover[strlen(ARCHIVO_PROCESS_ID_DAEMON) + strlen(COMANDO_REMOVER_ARCHIVO)];
@@ -35,7 +40,7 @@ void salir(int status){
  *El thread principal creará worker threads para
  *manejar las peticiones de cada controlador.
  */
-void *manejarComandosControlador(void *sd){
+void manejarComandosControlador(void *sd){
     
     char mensaje[MAX_BUFFER_SIZE];
     int tRet;
@@ -54,15 +59,14 @@ void *manejarComandosControlador(void *sd){
     if(bytes_recibidos > 0){
         pidControlador = atoi(pidControladorStr);
         
-#ifdef DEBUG
-        printf("PID del controlador conectado es %d\n", pidControlador);
-#endif
+        printf("INFO: PID del controlador conectado es %d\n", pidControlador);
+
     }
     else printf("Error al recibir PID\n");
     
     bytes_recibidos = -1;
     
-    //Empezamos a recibir los mensajes
+    //Empezamos a recibir los mensajes  ---> check!!!!!
     do{
         int comando;
         
@@ -83,12 +87,18 @@ void *manejarComandosControlador(void *sd){
                 
                 //Si no hubo errores, procesamos el comando
                 if(recibirDatos(sid2, &com, COMANDO) == 1){            //Agregar n =??
+                                        
+                    
                     procesarComando(sid2, &com);                              //Realizamos acciones pedidas
-                    //TODO obtener resultados
-                    //TODO Generar la respuesta
-                    //TODO enviar respuesta (enviada por procesar comando)
+                    
+                    //liberar memoria de los argumentos del comando
+                    int indiceComando = 0;
+                    for(indiceComando = 0; indiceComando < com.numero_argumentos; indiceComando++){
+                        free(com.argumentos[indiceComando]);
+                    }
+
                 }
-                //liberar memoria del comando
+                
             }
         }
         else{
@@ -104,26 +114,157 @@ void *manejarComandosControlador(void *sd){
     return;
 }
 
+/**
+ *Rutina que se encarga de llevar el control de cuando se deben enviar las alertas.
+ */
+void *temporizadorEnvioEmails(void *sd){
+    
+    struct configuracionMonitor *conf = (struct configuracionMonitor *)sd;
+    int tiempoEmails = conf->periodoEnvioEmails;
+    
+    int periodoSleep = 60;          //segundos
+    
+    //dormimos 1 minuto a la vez.
+    //la primera vez, dejamos pasar 3 minutos, para dar tiempo a la tarjeta que se inicialice
+    //y haga las primeras mediciones
+    sleep(3*periodoSleep);
+    
+    int i;
+    volatile struct medicion *listaMedicionesTemporal = listaMediciones;
+    //Entramos al lazo
+    while(1){
+        
+        pthread_mutex_lock(&mutexEmailsAlerta);
+        for(i = 0; i < NUMERO_MEDICIONES_ADC; i++){
+            
+            //revisarStatusMediciones notifica si envió e-mail. Si es positivo, este hilo
+            //lleva control de cuanto tiempo ha pasado desde el ultimo e-mail.
+            if(alertaEmailEnviada[i]){
+                
+                if(alertaEmailEnviada[i] && tiempoDesdeUltimaAlerta[i] < tiempoEmails ){            //Verficamos que dicho canal haya enviado alerta y que el tiempo sea menor de 30 minutos
+                    //alertaEmailEnviada[i] = 0;
+                    tiempoDesdeUltimaAlerta[i] += 1;
+#ifdef DEBUG
+                    printf("Tiempo desde ultima alerta de %d: %d\n", i, tiempoDesdeUltimaAlerta[i]);
+#endif
+                }
+                else if(alertaEmailEnviada[i] && tiempoDesdeUltimaAlerta[i] == tiempoEmails){
+                    alertaEmailEnviada[i] = 0;                            //damos nuevo permiso para mandar e-mails
+                    tiempoDesdeUltimaAlerta[i] = 0;
+                }
+            }
+        }
+        pthread_mutex_unlock(&mutexEmailsAlerta);
+
+        
+        sleep(periodoSleep);
+    }
+}
+
 
 
 /**
  *Rutina que se encarga de monitorear exclusivamente la puerta de acceso al nodo
+ *El puerto de entrada esta por defaul activa high (1 logico = 3.3V)
+ *0V   --> PUERTA CERRADA     (con circuito pull-up)
+ *3.3V --> PUERTA ABIERTA
  */
 void *monitorPuerta(void *sd){
     
     struct configuracionMonitor *conf = (struct configuracionMonitor *)sd;
     int intervaloMonitoreo = conf->intervaloMonitoreoPuerta;
-    int puertaAbierta = 0;
-    int puertaAbiertaUltMed = 0;
+    status_medicion puertaAbiertaUltMed;
+    int j = 0;
+    status_puerto_DIO sensorPuerta;
     
-    printf("INFO: La puerta de acceso al nodo esta siendo monitoreada.\n");
-    while(1){
-        //TODO chequear el sensor de la puerta
-        //TODO Verificar si esta abierto o cerrado
-        //TODO si esta abierto, enviar traps
-        sleep(intervaloMonitoreo);
+    //Medimos el sensor de apertura de puerta   
+    sensorPuerta = statusPuerto(puerto_DIO_4);          //puerto puerta es DIO_4
+       
+    //Hacemos una primera medicion, para saber el status real de la puerta
+    if(sensorPuerta == PUERTO_OFF){        
+        //La puerta esta cerrada
+        puertaAbiertaUltMed = CERRADO;
+        printf("INFO: La puerta de acceso al nodo esta siendo monitoreada. Puerta cerrada.\n");
         
+        //mandar trap de notificacion
+        for(j = 0; j < configuracion->numeroServidoresSNMP; j++){
+            enviarTrap(ss[j], informacion_nodo.ip, SNMP_GENERICTRAP_ENTERSPECIFIC, TRAP_PUERTA_CERRADA, NULL, 0.0f);
+        }
     }
+    else if(sensorPuerta == PUERTO_ON){
+        //La puerta estaba abierta
+        puertaAbiertaUltMed = ABIERTO;
+        printf("INFO: La puerta de acceso al nodo esta siendo monitoreada. Puerta abierta.\n");
+        //mandar trap de notificacion
+        for(j = 0; j < configuracion->numeroServidoresSNMP; j++){
+            enviarTrap(ss[j], informacion_nodo.ip, SNMP_GENERICTRAP_ENTERSPECIFIC, TRAP_PUERTA_ABIERTA, NULL, 0.0f);
+        }
+    }
+    
+    //Buffers para strings de memoria
+    int tamanoString = 300;
+    char *asunto = malloc(sizeof(char)*tamanoString);
+    char *mensaje = malloc(sizeof(char)*tamanoString);
+    
+    if(asunto == NULL || mensaje == NULL){
+        printf("ERROR: Problema al asignar memoria para monitoreo de la puerta.\n");
+        return;
+    }
+    //Empezamos a monitorear la puerta regularmente.
+    while(1){
+        
+        j = 0;
+        
+        //TODO chequear el sensor de la puerta
+        sensorPuerta = statusPuerto(puerto_DIO_4);
+        
+        //Puerta abierta
+        if(sensorPuerta == PUERTO_OFF && puertaAbiertaUltMed == CERRADO){        
+            //            
+        }
+        else if(sensorPuerta == PUERTO_OFF && puertaAbiertaUltMed == ABIERTO){
+            
+            //La puerta estaba abierta, y fue cerrada
+            puertaAbiertaUltMed = CERRADO;
+            
+            printf("INFO: La puerta de acceso al nodo ha sido cerrada.\n");
+            
+            for(j = 0; j < configuracion->numeroServidoresSNMP; j++){
+                enviarTrap(ss[j], informacion_nodo.ip, SNMP_GENERICTRAP_ENTERSPECIFIC, TRAP_PUERTA_CERRADA, NULL, 0.0f);
+            }
+            
+            //Enviamos mail de alerta.                            
+            memset(asunto, 0, tamanoString);
+            memset(mensaje, 0, tamanoString);
+            snprintf(asunto, tamanoString, "ALERTA NODO %s: Puerta de nodo cerrada.",informacion_nodo.id);
+            snprintf(mensaje, tamanoString, "La puerta del nodo %s ha sido cerrada.",informacion_nodo.id);
+            enviarMultiplesEmails(configuracion->destinatariosAlertas, configuracion->numeroDestinatariosAlertas, asunto, "monitornodos@telconet.net", mensaje);
+
+        }
+        else if(sensorPuerta == PUERTO_ON && puertaAbiertaUltMed == CERRADO){
+            //La puerta estaba cerrada y fue abierta.
+            puertaAbiertaUltMed = ABIERTO;
+            
+            printf("INFO: La puerta de acceso al nodo ha sido abierta.\n");
+            
+            for(j = 0; j < configuracion->numeroServidoresSNMP; j++){
+                enviarTrap(ss[j], informacion_nodo.ip, SNMP_GENERICTRAP_ENTERSPECIFIC, TRAP_PUERTA_ABIERTA, NULL, 0.0f);
+            }
+            
+            memset(asunto, 0, tamanoString);
+            memset(mensaje, 0, tamanoString);
+            snprintf(asunto, tamanoString, "ALERTA NODO %s: Puerta de nodo abierta.", informacion_nodo.id);
+            snprintf(mensaje, tamanoString, "La puerta del nodo %s ha sido abierta.", informacion_nodo.id);
+            enviarMultiplesEmails(configuracion->destinatariosAlertas, configuracion->numeroDestinatariosAlertas, asunto, "monitornodos@telconet.net", mensaje);
+        }
+        else if(sensorPuerta == PUERTO_ON && puertaAbiertaUltMed == ABIERTO){
+            //
+        }
+        usleep(intervaloMonitoreo*1000);        //convertir usecs a msecs
+    }
+    
+    free(asunto);
+    free(mensaje);
 }
 
 /**
@@ -142,6 +283,12 @@ void *recComandosEnvResp(void *ptr)
     
     if(sd1 == -1){
         perror("socket");
+        
+        //Removemos el archivo con el pid    
+        char comandoRemover[strlen(ARCHIVO_PROCESS_ID_DAEMON) + strlen(COMANDO_REMOVER_ARCHIVO)];
+        strcpy(comandoRemover, COMANDO_REMOVER_ARCHIVO);
+        strcat(comandoRemover, ARCHIVO_PROCESS_ID_DAEMON);
+        system(comandoRemover);
         exit(1);
     }
     
@@ -155,7 +302,20 @@ void *recComandosEnvResp(void *ptr)
     if( bind(sd1, (struct sockaddr *) &local, tamano_local) == -1)
     {
         perror("bind");
+        
+        //Removemos el archivo con el pid    
+        char comandoRemover[strlen(ARCHIVO_PROCESS_ID_DAEMON) + strlen(COMANDO_REMOVER_ARCHIVO)];
+        strcpy(comandoRemover, COMANDO_REMOVER_ARCHIVO);
+        strcat(comandoRemover, ARCHIVO_PROCESS_ID_DAEMON);
+        system(comandoRemover);
         exit(1);
+    }
+    
+    //Hacemos el archivo accesible a otros usuarios, para que se puedan comunicar con nosotros. CAMBIO POR VERIFICAR
+    int res2 = chmod(ARCHIVO_SOCKET_IPC, S_IRUSR | S_IWUSR | S_IXUSR | S_IWGRP | S_IRGRP | S_IWOTH | S_IROTH);
+    
+    if(res2 < 0){
+        perror("ERROR: ");
     }
     
     //empezamos a escuchar las conexion
@@ -163,9 +323,7 @@ void *recComandosEnvResp(void *ptr)
         perror("listen");
         exit(1);
     }
-    
-    //TODO: Crear la thread de monitoreo?
-    
+      
     //Aceptamos la conexiones entrantes, y generamos un thread que
     //maneje la peticion
     while(1){
@@ -218,11 +376,16 @@ int procesarComando(int fd, struct comando *com)
         printf("INFO: Se recibio un comando invalido\n");
         return -1;
     }
+    else {
+        printf("INFO: Se recibio un comando valido\n");
+    }
+    
+    //printf("comando: %d\n", com->com);
     
     struct respuesta res;
     int lon = 0;
     char *buffer = NULL;
-    int longitudMinimaBuffer = 8192;
+    int longitudMinimaBuffer = 1024;                //--CHECK antes 8192
     
     //Vemos que tipo de comando es
     switch (com->com){
@@ -230,7 +393,7 @@ int procesarComando(int fd, struct comando *com)
             
             //Creamos la respuesta
             res.status = OK;
-            res.res = "INFO: El monitor de nodos ha sido cerrado.";
+            res.res = "El monitor de nodos ha sido cerrado.";
             res.long_res = strlen(res.res);
             enviarDatos(fd, &res, RESPUESTA);
             salir(0);
@@ -245,7 +408,128 @@ int procesarComando(int fd, struct comando *com)
                 res.long_res = strlen(buffer);
                 res.res = buffer;
                 enviarDatos(fd, &res, RESPUESTA);
-                free(res.res);
+                free(buffer);
+            }
+            break;
+        case CAMBIAR_MINIMOS:
+            res.status = OK;
+            lon = longitudMinimaBuffer*sizeof(char);
+            buffer = malloc(lon);              //CHECK
+            if(buffer != NULL){
+                memset(buffer, 0, lon);
+                
+                //Creamos el string del comando
+                char *comandoCambiarMinimosStr = malloc(longitudMinimaBuffer*sizeof(char));
+                if(comandoCambiarMinimosStr != NULL){
+                    memset(comandoCambiarMinimosStr, 0, longitudMinimaBuffer);
+                    strncat(comandoCambiarMinimosStr, "sed -i \"/valores-min/cvalores-min-permitidos = ", longitudMinimaBuffer);
+                    strncat(comandoCambiarMinimosStr, com->argumentos[0], longitudMinimaBuffer);
+                    strncat(comandoCambiarMinimosStr, "\" ", longitudMinimaBuffer);
+                    strncat(comandoCambiarMinimosStr, configuracion->rutaArchivoConfiguracion, longitudMinimaBuffer);
+                    
+                    //printf("%s\n", comandoCambiarMinimosStr);
+                }
+                else return -1;
+                
+                int resultado = system(comandoCambiarMinimosStr);
+                
+                if(!resultado){
+                    res.status = OK;
+                    
+                    struct configuracionMonitor* configuracionNueva;
+                    configuracionNueva = leerArchivoConfiguracion(strdup(configuracion->rutaArchivoConfiguracion));
+                    
+                    //Puntero temporal a los minimos anteriores...
+                     char ** minimosAnteriores = configuracion->valoresMinimosPermitidosMediciones;
+                    
+                    //Cambiamos a los nuevos minimos
+                    configuracion->valoresMinimosPermitidosMediciones = configuracionNueva->valoresMinimosPermitidosMediciones;
+                    convertirMinimosAfloat();
+                    
+                    //Liberamos la memoria ocupada por los minimos anteriores.
+                    int indiceMinimosPer = 0;
+                    for(indiceMinimosPer = 0; indiceMinimosPer < configuracion->numeroValoresMinimosPermitidos; indiceMinimosPer++){
+                        free(minimosAnteriores[indiceMinimosPer]);
+                    }
+                    
+                    
+                    
+                    
+                    sprintf(buffer, "Minimos cambiados exitosamente.");
+                    
+                    //TODO: copiar nuevos minimos...
+                    
+                    //volvemos a cargar el archivo de configuración
+                    /*struct configuracionMonitor* configuracionNueva = configuracion;  //Mantenemos un puntero temporal
+                    
+                    //Cargamos una nueva configuracion, duplicando el string de la ruta del archivo
+                    configuracion = leerArchivoConfiguracion(strdup(configuracion->rutaArchivoConfiguracion));   //POSIBLE RACE CONDITION!!! CHECK!!!! SEGMENTATION FAULT??
+                    configuracion->interfazRed = obtenerInterfazDeRed();
+                    
+                    
+                    
+                    //TODO"Liberamos la configuracion antigua
+                    free(configuracionAnterior->id_nodo);
+                    free(configuracionAnterior->interfazRed);
+                    free(configuracionAnterior->rutaArchivoConfiguracion);
+                    free(configuracionAnterior->rutaArchivoColumnasBDADC);
+                    free(configuracionAnterior->rutaArchivoColumnasBDDIO);
+                    free(configuracionAnterior->usuarioBD);
+                    free(configuracionAnterior->claveBD);
+                    free(configuracionAnterior->ipServidorBD);
+                    free(configuracionAnterior->BD);
+                    free(configuracionAnterior->comunidadSNMP);
+                    free(configuracionAnterior->nombreSesionSNMP);
+                    free(configuracionAnterior->ipServidorActualizaciones);
+                    
+                    printf("WIiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii\n");
+                    
+                    //Liberamos las direcciones SNMP
+                    
+                    int indiceSNMP = 0;
+                    for(indiceSNMP = 0; indiceSNMP < configuracionAnterior->numeroServidoresSNMP; indiceSNMP++){
+                        free(configuracionAnterior->ipServidorSNMP[indiceSNMP]);
+                    }
+                    
+                    //TODO Abrir las nuevas sesiones SNMP...??
+                    
+                    
+                    //Liberamos los valores minimos permitidos
+                    int indiceMinimosPer = 0;
+                    for(indiceMinimosPer = 0; indiceMinimosPer < configuracionAnterior->numeroValoresMinimosPermitidos; indiceMinimosPer++){
+                        free(configuracionAnterior->valoresMinimosPermitidosMediciones[indiceMinimosPer]);
+                    }
+                    
+                    
+                    //Liberamos los destinatarios de alertas
+                    int indiceDestAlertas = 0;
+                    for(indiceDestAlertas = 0; indiceDestAlertas < configuracionAnterior->numeroDestinatariosAlertas; indiceDestAlertas++){
+                        free(configuracionAnterior->destinatariosAlertas[indiceDestAlertas]);
+                    }
+                    
+                    //Liberamos los canales activos
+                    int indiceCanalesActivos = 0;
+                    for(indiceCanalesActivos = 0; indiceCanalesActivos < configuracionAnterior->numeroCanalesActivos; indiceCanalesActivos++){
+                        free(configuracionAnterior->canalesActivos[indiceCanalesActivos]);
+                    }
+                    
+                    free(configuracionAnterior);     
+                    sprintf(buffer, "Minimos cambiados exitosamente.");
+                }
+                else{
+                    res.status = ERROR;
+                    sprintf(buffer, "No se pudieron cambiar los minimos");*/
+                }
+                
+                
+                res.long_res = strlen(buffer);
+                res.res = buffer;
+                enviarDatos(fd, &res, RESPUESTA);
+                free(buffer);
+                free(comandoCambiarMinimosStr);
+                
+                //TODO: free argumentos???
+                
             }
             break;
         case INFORMACION_CONF:
@@ -280,38 +564,34 @@ int procesarComando(int fd, struct comando *com)
             buffer = malloc(lon);              //CHECK
             if(buffer != NULL){
                 memset(buffer, 0, lon);
-                
-                strcat(buffer,"Interfaz de red del monitor: ");
-                strcat(buffer, configuracion->interfazRed);
-                strcat(buffer,"\n");
-                strcat(buffer,"Direccion IP del monitor: ");
-                strcat(buffer,informacion_nodo.ip);
-                strcat(buffer,"\n");
-                strcat(buffer,"Direccion IP del servidor de base de datos: ");
-                strcat(buffer,configuracion->ipServidorBD);
-                strcat(buffer,"\n");
-                strcat(buffer,"Archivo de columnas de base de datos: ");
-                strcat(buffer,configuracion->rutaArchivoColumnasBD);
-                strcat(buffer,"\n");
-                strcat(buffer, servidoresSNMP);
-                strcat(buffer, "\n");
-                strcat(buffer,"Intervalo de monitoreo: ");
-                
+
                 char bufferNumero[20];
-                sprintf(bufferNumero, "%.2f", ((float)(configuracion->intervaloMonitoreo)) / ((float)(MILISEGUNDOS_POR_MINUTO)));
-                strcat(buffer,bufferNumero);
-                strcat(buffer," minuto(s)\n");
-                
                 memset(bufferNumero, 0, 20);
-                sprintf(bufferNumero, "%d", configuracion->intervaloMonitoreoPuerta);
-                strcat(buffer,"Intervalo de monitoreo de puerta: ");
+                sprintf(bufferNumero, "%.2f", ((float)(configuracion->intervaloMonitoreo)) / ((float)(SEGUNDOS_POR_MINUTO)));
+                /*strcat(buffer,bufferNumero);
+                strcat(buffer," minuto(s)\n");*/
+                
+                char bufferNumero2[20];
+                memset(bufferNumero2, 0, 20);
+                sprintf(bufferNumero2, "%.2f", ((float)configuracion->intervaloMonitoreoPuerta) / 1000.0f);
+                /*strcat(buffer,"Intervalo de monitoreo de puerta: ");
                 strcat(buffer,bufferNumero);
-                strcat(buffer," segundo(s)");
+                strcat(buffer," segundo(s)");*/
+                
+                snprintf(buffer, lon, "Interfaz de red del monitor: %s\nDireccion IP del monitor: %s\nDireccion IP del servidor de base de datos: %s\nArchivo de columnas de base de datos: %s\n%s\nIntervalo de monitoreo: %s minuto(s)\nIntervalo de monitoreo de puerta: %s segundo(s)",
+                         configuracion->interfazRed,
+                         informacion_nodo.ip,
+                         configuracion->ipServidorBD,
+                         configuracion->rutaArchivoColumnasBDADC,
+                         servidoresSNMP,
+                         bufferNumero,
+                         bufferNumero2);
             
                 res.long_res = strlen(buffer);
                 res.res = buffer;
                 enviarDatos(fd, &res, RESPUESTA);
-                free(res.res);
+                free(buffer);
+                free(servidoresSNMP);
             }
             else return -1;
             break;
@@ -322,92 +602,362 @@ int procesarComando(int fd, struct comando *com)
             
             memset(buffer, 0, longitudMinimaBuffer);
             
-            strcat(buffer, "Valores minimos configurados:\n");
+            //strcat(buffer, "Valores minimos configurados:\n");
+            //int j;
             
-            int j;
-            for(j = 0; j < configuracion->numeroValoresMinimosPermitidos; j++){
-                char numero[5];
-                memset(&numero, 0, 5);
-                  
-                //Tipo de valor
-                if(j < 3){
-                    strcat(buffer, "Temperatura ");
-                    sprintf(numero,"%d",j + 1);
-                    strcat(buffer, numero);
-                    
-                }
-                else if(j == 3){
-                    strcat(buffer, "Humedad");
-                }
-                else if(j > 3 && j < 8){
-                    strcat(buffer, "Voltaje DC ");
-                    sprintf(numero,"%d", j - 4 + 1);
-                    strcat(buffer, numero);  
-                }
-                else if(j >= 8 && j < 12){
-                    strcat(buffer, "Corriente DC ");
-                    sprintf(numero,"%d", j - 8 + 1);
-                    strcat(buffer, numero);
-                }
-                else if(j >= 12){
-                    strcat(buffer, "Corriente AC ");
-                    sprintf(numero,"%d", j - 12 + 1);
-                    strcat(buffer, numero);
-                }
-                
-                strcat(buffer,": ");
-                strcat(buffer, configuracion->valoresMinimosPermitidosMediciones[j]);
-            
-                //Unidad
-                if(j < 3){
-                    strcat(buffer, " C");
-                }
-                else if(j == 3){
-                    strcat(buffer, " % HR");
-                }
-                else if(j > 3 && j < 8){
-                    strcat(buffer, " V");
-                    
-                }
-                else if(j >= 8){
-                    strcat(buffer, " A");
-                }
-                
-                //Salto
-                if(j < configuracion->numeroValoresMinimosPermitidos - 1){
-                    strcat(buffer, "\n");
-                }
-                else strcat(buffer, "\0");
-            }
+            snprintf(buffer, longitudMinimaBuffer, "Valores de niveles de alerta nodo %s:\n"
+                     "Temperatura 1: %s C\n"
+                     "Temperatura 2: %s C\n"
+                     "Temperatura 3: %s C\n"
+                     "Humedad: %s % HR\n"
+                     "Voltaje DC 1: %s V\n"
+                     "Voltaje DC 2: %s V\n"
+                     "Voltaje DC 3: %s V\n"
+                     "Voltaje DC 4: %s V\n"
+                     "Corriente DC 1: %s A\n"
+                     "Corriente DC 2: %s A\n"
+                     "Corriente DC 3: %s A\n"
+                     "Corriente DC 4: %s A\n"
+                     "Corriente AC 1: %s A\n"
+                     "Corriente AC 2: %s A\n"
+                     "Corriente AC 3: %s A\n"
+                     "Corriente AC 4: %s A\n"
+                     "Voltaje AC 1: %s V\n"
+                     "Voltaje AC 2: %s V\n",
+                     informacion_nodo.id,
+                    configuracion->valoresMinimosPermitidosMediciones[1],
+                    configuracion->valoresMinimosPermitidosMediciones[5],
+                    configuracion->valoresMinimosPermitidosMediciones[9],
+                    configuracion->valoresMinimosPermitidosMediciones[13],
+                    configuracion->valoresMinimosPermitidosMediciones[17],
+                    configuracion->valoresMinimosPermitidosMediciones[3],
+                    configuracion->valoresMinimosPermitidosMediciones[7],
+                    configuracion->valoresMinimosPermitidosMediciones[10],
+                    configuracion->valoresMinimosPermitidosMediciones[0],
+                    configuracion->valoresMinimosPermitidosMediciones[4],
+                    configuracion->valoresMinimosPermitidosMediciones[8],
+                    configuracion->valoresMinimosPermitidosMediciones[11],
+                    configuracion->valoresMinimosPermitidosMediciones[14],
+                    configuracion->valoresMinimosPermitidosMediciones[16],
+                    configuracion->valoresMinimosPermitidosMediciones[2],
+                    configuracion->valoresMinimosPermitidosMediciones[6],
+                    configuracion->valoresMinimosPermitidosMediciones[12],
+                    configuracion->valoresMinimosPermitidosMediciones[15]);
             
             res.status = OK;
             res.res = buffer;
             res.long_res = strlen(buffer);
             enviarDatos(fd, &res, RESPUESTA);
-            free(res.res);
+            free(buffer);
+            break;
+        case MOSTRAR_MEDICIONES:
+            buffer = malloc(longitudMinimaBuffer);
+            
+            if(buffer == NULL){
+                return -1;           //no hay memoria
+            }
+            
+            memset(buffer, 0, longitudMinimaBuffer);
+            
+            float* listaValoresTmp = NULL; 
+            int tamanoListaValoresTmp = sizeof(float)*NUMERO_MEDICIONES_ADC;
+            
+            listaValoresTmp = malloc(tamanoListaValoresTmp);
+            
+            if(listaValoresTmp == NULL){
+                return -1;      //No hay memoria
+            }
+            
+            memset(listaValoresTmp, 0, tamanoListaValoresTmp);
+  
+            volatile struct medicion* k = listaMediciones;
+            int w = 0;
+            for(w = 0; w < NUMERO_MEDICIONES_ADC; w++){
+                listaValoresTmp[w] = k->valor;                //!!
+                k = k->siguiente;
+                
+            }
+            
+            //Para AC
+            if(listaValoresTmp[12] < 15.00f && listaValoresTmp[15] < 15.00f){
+                snprintf(buffer, longitudMinimaBuffer, "Status del nodo %s:\n"
+                         "Temperatura 1: %.2f C\n"
+                         "Temperatura 2: %.2f C\n"
+                         "Temperatura 3: %.2f C\n"
+                         "Humedad: %.2f % HR\n"
+                         "Voltaje DC 1: %.2f V\n"
+                         "Voltaje DC 2: %.2f V\n"
+                         "Voltaje DC 3: %.2f V\n"
+                         "Voltaje DC 4: %.2f V\n"
+                         "Corriente DC 1: %.2f A\n"
+                         "Corriente DC 2: %.2f A\n"
+                         "Corriente DC 3: %.2f A\n"
+                         "Corriente DC 4: %.2f A\n"
+                         "Corriente AC 1: %.2f A\n"
+                         "Corriente AC 2: %.2f A\n"
+                         "Corriente AC 3: %.2f A\n"
+                         "Corriente AC 4: %.2f A\n"
+                         "Voltaje AC 1: < 15 V (RMS)\n"
+                         "Voltaje AC 2: < 15 V (RMS)\n",
+                        informacion_nodo.id,
+                        listaValoresTmp[1],
+                        listaValoresTmp[5],
+                        listaValoresTmp[9],
+                        listaValoresTmp[13],
+                        listaValoresTmp[17],
+                        listaValoresTmp[3],
+                        listaValoresTmp[7],
+                        listaValoresTmp[10],
+                        listaValoresTmp[0],
+                        listaValoresTmp[4],
+                        listaValoresTmp[8],
+                        listaValoresTmp[11],
+                        listaValoresTmp[14],
+                        listaValoresTmp[16],
+                        listaValoresTmp[2],
+                        listaValoresTmp[6]);
+                
+            }
+            else if(listaValoresTmp[12] < 15.00f){
+                snprintf(buffer, longitudMinimaBuffer, "Status del nodo %s:\n"
+                         "Temperatura 1: %.2f C\n"
+                         "Temperatura 2: %.2f C\n"
+                         "Temperatura 3: %.2f C\n"
+                         "Humedad: %.2f % HR\n"
+                         "Voltaje DC 1: %.2f V\n"
+                         "Voltaje DC 2: %.2f V\n"
+                         "Voltaje DC 3: %.2f V\n"
+                         "Voltaje DC 4: %.2f V\n"
+                         "Corriente DC 1: %.2f A\n"
+                         "Corriente DC 2: %.2f A\n"
+                         "Corriente DC 3: %.2f A\n"
+                         "Corriente DC 4: %.2f A\n"
+                         "Corriente AC 1: %.2f A\n"
+                         "Corriente AC 2: %.2f A\n"
+                         "Corriente AC 3: %.2f A\n"
+                         "Corriente AC 4: %.2f A\n"
+                         "Voltaje AC 1: < 15 V (RMS)\n"
+                         "Voltaje AC 2: %.2f V (RMS)\n",
+                        informacion_nodo.id,
+                        listaValoresTmp[1],
+                        listaValoresTmp[5],
+                        listaValoresTmp[9],
+                        listaValoresTmp[13],
+                        listaValoresTmp[17],
+                        listaValoresTmp[3],
+                        listaValoresTmp[7],
+                        listaValoresTmp[10],
+                        listaValoresTmp[0],
+                        listaValoresTmp[4],
+                        listaValoresTmp[8],
+                        listaValoresTmp[11],
+                        listaValoresTmp[14],
+                        listaValoresTmp[16],
+                        listaValoresTmp[2],
+                        listaValoresTmp[6],
+                        listaValoresTmp[15]);
+                
+            }
+            else if(listaValoresTmp[15] < 15.00f){
+                snprintf(buffer, longitudMinimaBuffer, "Status del nodo %s:\n"
+                         "Temperatura 1: %.2f C\n"
+                         "Temperatura 2: %.2f C\n"
+                         "Temperatura 3: %.2f C\n"
+                         "Humedad: %.2f % HR\n"
+                         "Voltaje DC 1: %.2f V\n"
+                         "Voltaje DC 2: %.2f V\n"
+                         "Voltaje DC 3: %.2f V\n"
+                         "Voltaje DC 4: %.2f V\n"
+                         "Corriente DC 1: %.2f A\n"
+                         "Corriente DC 2: %.2f A\n"
+                         "Corriente DC 3: %.2f A\n"
+                         "Corriente DC 4: %.2f A\n"
+                         "Corriente AC 1: %.2f A\n"
+                         "Corriente AC 2: %.2f A\n"
+                         "Corriente AC 3: %.2f A\n"
+                         "Corriente AC 4: %.2f A\n"
+                         "Voltaje AC 1: %.2f V (RMS)\n"
+                         "Voltaje AC 2: < 15 V (RMS)\n",
+                        informacion_nodo.id,
+                        listaValoresTmp[1],
+                        listaValoresTmp[5],
+                        listaValoresTmp[9],
+                        listaValoresTmp[13],
+                        listaValoresTmp[17],
+                        listaValoresTmp[3],
+                        listaValoresTmp[7],
+                        listaValoresTmp[10],
+                        listaValoresTmp[0],
+                        listaValoresTmp[4],
+                        listaValoresTmp[8],
+                        listaValoresTmp[11],
+                        listaValoresTmp[14],
+                        listaValoresTmp[16],
+                        listaValoresTmp[2],
+                        listaValoresTmp[6],
+                        listaValoresTmp[12]);
+                
+            }
+            
+            else{
+                snprintf(buffer, longitudMinimaBuffer, "Status del nodo %s:\n"
+                         "Temperatura 1: %.2f C\n"
+                         "Temperatura 2: %.2f C\n"
+                         "Temperatura 3: %.2f C\n"
+                         "Humedad: %.2f % HR\n"
+                         "Voltaje DC 1: %.2f V\n"
+                         "Voltaje DC 2: %.2f V\n"
+                         "Voltaje DC 3: %.2f V\n"
+                         "Voltaje DC 4: %.2f V\n"
+                         "Corriente DC 1: %.2f A\n"
+                         "Corriente DC 2: %.2f A\n"
+                         "Corriente DC 3: %.2f A\n"
+                         "Corriente DC 4: %.2f A\n"
+                         "Corriente AC 1: %.2f A\n"
+                         "Corriente AC 2: %.2f A\n"
+                         "Corriente AC 3: %.2f A\n"
+                         "Corriente AC 4: %.2f A\n"
+                         "Voltaje AC 1: %.2f V (RMS)\n"
+                         "Voltaje AC 2: %.2f V (RMS)\n",
+                        informacion_nodo.id,
+                        listaValoresTmp[1],
+                        listaValoresTmp[5],
+                        listaValoresTmp[9],
+                        listaValoresTmp[13],
+                        listaValoresTmp[17],
+                        listaValoresTmp[3],
+                        listaValoresTmp[7],
+                        listaValoresTmp[10],
+                        listaValoresTmp[0],
+                        listaValoresTmp[4],
+                        listaValoresTmp[8],
+                        listaValoresTmp[11],
+                        listaValoresTmp[14],
+                        listaValoresTmp[16],
+                        listaValoresTmp[2],
+                        listaValoresTmp[6],
+                        listaValoresTmp[12],
+                        listaValoresTmp[15]);
+            }
+            
+            //printf("%s\n",buffer);
+            
+            res.status = OK;
+            res.res = buffer;
+            res.long_res = strlen(buffer);
+            enviarDatos(fd, &res, RESPUESTA);
+            free(buffer);
+            free(listaValoresTmp);
+            break;
+        case ACTIVAR_RELE:
+            
+            res.status = OK; 
+                   
+            //TODO aqui activamos el relé
+            int resultado = activarRele(atoi(com->argumentos[0]), informacion_nodo.id, configuracion->rutaArchivoColumnasBDDIO);  //problemas--> no me deja ejecutar comandos una vez que ejecutp esto.
+            //int resultado = 0;
+            char *respuestaTmp = malloc(sizeof(char)*100);
+            if(respuestaTmp == NULL){
+                //TODO enviar respuesta de error
+                return -1;
+            }
+            memset(respuestaTmp, 0, 100);
+            
+            //activarRele devuelve 0 cuando termina correctamente
+            if(!resultado){
+                snprintf(respuestaTmp, 100, "Se activo el rele %s.",com->argumentos[0]);
+            }
+            else{
+                res.status = ERROR; 
+                snprintf(respuestaTmp, 100, "No se pudo activar el rele %s.",com->argumentos[0]);
+            }           
+            
+            res.res = respuestaTmp;
+            res.long_res = strlen(res.res);
+            enviarDatos(fd, &res, RESPUESTA);
+            free(respuestaTmp);
+            break;
+        case DESACTIVAR_RELE:
+            res.status = OK;            //hay que hacer scope con llaves, caso contrario al borrar esto, error de compilacion
+            
+            //TODO aqui desactivamos el relé
+            int resultado2 = desactivarRele(atoi(com->argumentos[0]), informacion_nodo.id, configuracion->rutaArchivoColumnasBDDIO);
+            //int resultado2 = 0;
+            char *respuestaTmp2 = malloc(sizeof(char)*100);
+            
+            if(respuestaTmp == NULL){
+                //TODO enviar respuesta de error
+                return -1;
+            }
+            memset(respuestaTmp2, 0, 100);
+            
+            if(!resultado2){
+                snprintf(respuestaTmp2, 100, "Se desactivo el rele %s.",com->argumentos[0]);
+            }
+            else{
+                res.status = ERROR;
+                snprintf(respuestaTmp2, 100, "No se pudo desactivar el rele %s.",com->argumentos[0]);
+            }
+            
+            res.res = respuestaTmp2;
+            res.long_res = strlen(res.res);
+            enviarDatos(fd, &res, RESPUESTA);
+            free(respuestaTmp2);
+            break;
+        case AYUDA:
+            buffer = malloc(longitudMinimaBuffer);
+            
+            if(buffer == NULL) return -1;           //no hay memoria
+            
+            memset(buffer, 0, longitudMinimaBuffer);
+            
+            //strcat(buffer, "Valores minimos configurados:\n");
+            //int j;
+            
+            snprintf(buffer, longitudMinimaBuffer, "Comandos disponibles:\n\n"
+                     "- cerrar monitor: esta comando cierra el proceso de monitoreo.\n\n"
+                     "- info nodo: devuelve informacion sobre el nodo, como direccion IP y nombre del nodo.\n\n"
+                     "- info configuracion: devuelve informacion de como esta configurado el sistema de monitoreo.\n\n"
+                     "- info niveles alertas: devuelve informacion de los valores que activaran las alertas para cada medicion.\n\n"
+                     "- status nodo: devuelve las mediciones actuales de voltaje, corriente, temperatura y humedad.\n\n"
+                     "- activar rele <numero>: Activa el rele indicado por el numero (de 1 a 4). Ejemplo: activar rele 2.\n\n"
+                     "- desactivar rele <numero>: Desactiva el rele indicado por el numero (de 1 a 4). Ejemplo: desactivar rele 2.\n\n"
+                     "- cambiar minimos: opcion para cambiar los niveles por debajo de los cuales se enviaran las alertas, para cada medicion.");
+            
+            res.status = OK;
+            res.res = buffer;
+            res.long_res = strlen(buffer);
+            enviarDatos(fd, &res, RESPUESTA);
+            free(buffer);
             break;
         default:
-            printf("ALERTA: Comando invalido.\n");
+            printf("ALERTA: Se recibio un comando invalido.\n");
+            res.status = ERROR;
+            res.res = "Comando invalido.";
+            res.long_res = strlen(res.res);
+            enviarDatos(fd, &res, RESPUESTA);            
             return -1;
-        
     }
     
     return 1;
 }
 
-
-
 /**
  *Rutina que lee el archivo de configuracion
  */
 struct configuracionMonitor* leerArchivoConfiguracion(char *rutaArchivo){
+    
     FILE *archivo = fopen(rutaArchivo, "r");
+    int longitudLinea = 512;
     
     if(archivo != NULL){
         printf("INFO: Ruta de archivo de configuracion: %s\n", rutaArchivo);
         
         struct configuracionMonitor *configuracion = malloc(sizeof(struct configuracionMonitor));
-        char linea[8192];
+        char linea[longitudLinea];               //--CHECK
+        
+        //Asignamos la ruta del archivo...
+        configuracion->rutaArchivoConfiguracion = rutaArchivo;      //CHECK
         
         while(1){
             
@@ -416,9 +966,9 @@ struct configuracionMonitor* leerArchivoConfiguracion(char *rutaArchivo){
             char **valores;
             
             //ponemos en cero el buffer
-            memset(linea, 0, 8192);
+            memset(linea, 0, longitudLinea);            //--CHECK
             
-            if(fgets(linea, 8192, archivo) == NULL){
+            if(fgets(linea, longitudLinea, archivo) == NULL){   //--CHECK
                 return configuracion;
             }
                         
@@ -449,7 +999,7 @@ struct configuracionMonitor* leerArchivoConfiguracion(char *rutaArchivo){
                             configuracion->intervaloMonitoreoPuerta = intervalo;    //valor predeterminado
                         }
                         
-                        printf("INFO: Intervalo de monitoreo de puerta de entrada: %.2f segundo(s)\n",((double)(configuracion->intervaloMonitoreoPuerta)));
+                        printf("INFO: Intervalo de monitoreo de puerta de entrada: %.2f segundo(s)\n",((double)(configuracion->intervaloMonitoreoPuerta) / 1000.0f));      //intervalo en millis
                     }
                     else return NULL;
                 }
@@ -466,15 +1016,24 @@ struct configuracionMonitor* leerArchivoConfiguracion(char *rutaArchivo){
                         else{
                             configuracion->intervaloMonitoreo = intervalo;              //valor predeterminado
                         }
-                        printf("INFO: Intervalo de monitoreo de status del nodo: %.2f minuto(s)\n",((double)(configuracion->intervaloMonitoreo))/(MILISEGUNDOS_POR_MINUTO));
+                        printf("INFO: Intervalo de monitoreo de status del nodo: %.2f minuto(s)\n", ((float)(configuracion->intervaloMonitoreo))/((float)(SEGUNDOS_POR_MINUTO)));
+                        
                     }
                     else return NULL;
                 }
-                else if(strstr(linea, ARCHIVO_COL_BD) != NULL){ 
+                else if(strstr(linea, ARCHIVO_COL_BD_ADC) != NULL){ 
                     valores = obtenerValorConfig(linea, &num);
                     if(valores != NULL){
-                        configuracion->rutaArchivoColumnasBD = valores[0];
-                        printf("INFO: Archivo de columnas de la base de datos: %s\n", configuracion->rutaArchivoColumnasBD);
+                        configuracion->rutaArchivoColumnasBDADC = valores[0];
+                        printf("INFO: Archivo de columnas de la base de datos (ADC): %s\n", configuracion->rutaArchivoColumnasBDADC);
+                    }
+                    else return NULL;
+                }
+                else if(strstr(linea, ARCHIVO_COL_BD_DIO) != NULL){ 
+                    valores = obtenerValorConfig(linea, &num);
+                    if(valores != NULL){
+                        configuracion->rutaArchivoColumnasBDDIO = valores[0];
+                        printf("INFO: Archivo de columnas de la base de datos (DIO): %s\n", configuracion->rutaArchivoColumnasBDDIO);
                     }
                     else return NULL;
                 }
@@ -557,6 +1116,14 @@ struct configuracionMonitor* leerArchivoConfiguracion(char *rutaArchivo){
                     }
                     else return NULL;
                 }
+                else if(strstr(linea, SERVIDOR_ACTUALIZACIONES) != NULL){ 
+                    valores = obtenerValorConfig(linea, &num);
+                    if(valores != NULL){
+                        configuracion->ipServidorActualizaciones = valores[0];
+                        printf("INFO: Direccion IP del servidor de actualizaciones: %s\n", configuracion->ipServidorActualizaciones);
+                    }
+                    else return NULL;
+                }
                 else if(strstr(linea, VALORES_MINIMOS_PERMITIDOS) != NULL){
                     valores = obtenerValorConfig(linea, &num);
                     if(valores != NULL){
@@ -583,6 +1150,33 @@ struct configuracionMonitor* leerArchivoConfiguracion(char *rutaArchivo){
                             printf("Destinatario %d: %s\n", i+1, configuracion->destinatariosAlertas[i]);
                         }
 #endif
+                    }
+                    else return NULL;
+                }
+                else if(strstr(linea, HABILITAR_ALERTAS) != NULL){
+                    valores = obtenerValorConfig(linea, &num);
+                    if(valores != NULL){
+                        
+                        //configuracion->valoresMinimosPermitidosMediciones = valores;
+                        configuracion->numeroCanalesActivos = num;
+                        //Asignamos los valores a la configuracion
+                        configuracion->canalesActivos = valores;
+                    }
+                    else return NULL;
+                }
+                else if(strstr(linea, PERIODO_ENVIO_EMAILS)!= NULL){      
+                    valores = obtenerValorConfig(linea, &num);
+                    if(valores != NULL){
+                        configuracion->periodoEnvioEmails = atoi(valores[0]);
+                        printf("INFO: Periodo de envio de e-mails de alerta: %d minutos.\n", configuracion->periodoEnvioEmails);
+                    }
+                    else return NULL;
+                }
+                else if(strstr(linea, RAZON_CT)!= NULL){      
+                    valores = obtenerValorConfig(linea, &num);
+                    if(valores != NULL){
+                        configuracion->razonCT = atof(valores[0]);
+                        printf("INFO: Razon de transformador de corriente: %.0f:1.\n", configuracion->razonCT);
                     }
                     else return NULL;
                 }
@@ -639,7 +1233,7 @@ char **obtenerValorConfig(char *linea, int *numeroValores){
     *numeroValores = numeroPuntoYComas + 1;
     
     //En este punto ya tenemos la direccion del primer caracter del valor
-    //Ahora contamos la longitud de caracteres del valor, para saber la cantida
+    //Ahora contamos la longitud de caracteres del valor, para saber la cantidad
     //memoria que debemos asignar
     int j = 0; 
     for(j = 0; j < *numeroValores ; j++){
@@ -680,3 +1274,4 @@ char **obtenerValorConfig(char *linea, int *numeroValores){
     }
     return buffer;
 }
+

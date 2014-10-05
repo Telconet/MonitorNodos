@@ -129,8 +129,10 @@ int enviarDatos(int des_archivo, void *valor, int tipo){
             return -1;
         }
         
-        return 1;
+       	//return 0
     } 
+    
+    return 0;
 }
 
 
@@ -265,6 +267,6 @@ int recibirDatos(int des_archivo, void *buffer ,int tipo){
             return -1;
         }
     }
-    return 1;    
+    return 0;    
 }
 

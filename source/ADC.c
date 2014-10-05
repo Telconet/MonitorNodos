@@ -190,9 +190,6 @@ int obtenerMuestra(BoardIndex tarjeta, int canal, int freqMuestreo, int numeroMu
     float promedio_canal1 = 0.0f;
     float promedio_canal2 = 0.0f;
     for( i = 0; i < numeroMuestras; i++){
-        
-        float valor1;
-        float valor2;
                
         promedio_canal1 += convertirAVoltaje(data_canal_1[i], rangoADC);//valor1;
         promedio_canal2 += convertirAVoltaje(data_canal_2[i], rangoADC);//valor2;

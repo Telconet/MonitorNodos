@@ -135,7 +135,7 @@ int main(int argc, char *argv[]) {
     //y envio de respuestas
     int tRet;
 
-    tRet = pthread_create(&localComandosThread, NULL, recComandosEnvResp, NULL);
+    tRet = pthread_create(&localComandosThread, NULL, (void *)recComandosEnvResp, NULL);
 
     if (tRet != 0) {
         perror("ERROR: No se pudo crear el thread de comandos. Saliendo...\n");
@@ -158,7 +158,7 @@ int main(int argc, char *argv[]) {
     //Creamos un thread para controlar acceso a las puertas.
     int tPuerta;
 
-    tPuerta = pthread_create(&monPuertaThread, NULL, monitorPuerta, (void *) configuracion);
+    tPuerta = pthread_create(&monPuertaThread, NULL, (void *)monitorPuerta, (void *) configuracion);
 
     if (tPuerta != 0) {
         perror("ALERTA: No se pudo crear el thread de monitoreo de la puerta de acceso. Saliendo...\n");
@@ -168,7 +168,7 @@ int main(int argc, char *argv[]) {
     int tTiempoEmails;
 
     pthread_mutex_init(&mutexEmailsAlerta, NULL);
-    tTiempoEmails = pthread_create(&tiempoEmailsThread, NULL, temporizadorEnvioEmails, (void *) configuracion);
+    tTiempoEmails = pthread_create(&tiempoEmailsThread, NULL, (void *)temporizadorEnvioEmails, (void *) configuracion);
 
     if (tPuerta != 0) {
         perror("ALERTA: No se pudo crear el thread de monitoreo de la puerta de acceso. Saliendo...\n");
@@ -247,9 +247,9 @@ int main(int argc, char *argv[]) {
     por segundo. Luego de los 14.675 minutos, programamos el crontab de tal forma que cada 15 minutos vuelva levantar
     el daemon de monitoreo.
     */
-    double inicio, fin=0;
+    /*double inicio, fin=0;
     double descanso=0;
-    inicio=clock()/CLOCKS_PER_SEC;
+    inicio=clock()/CLOCKS_PER_SEC;*/
     while (1){ //((fin + descanso) - inicio) < (60 * 13)) {
 
 	realizarMediciones(&listaMediciones);
@@ -364,7 +364,7 @@ int main(int argc, char *argv[]) {
         }*/
 
 
-        //*******Prueba del ADC
+        //Prueba del ADC
         /*memset(data_canal_1, 0, tamanoBuffers);
         memset(data_canal_2, 0, tamanoBuffers);
         
@@ -376,10 +376,10 @@ int main(int argc, char *argv[]) {
         
         //printf("\nVoltaje canal %d: %.4f V\n", canal, voltaje1);
         
-        /*printf("\nVoltaje canal %d: %.4f V\n", canal, voltaje1);
-        printf("\nVoltaje canal %d: %.4f V\n", canal+1, voltaje2);*/
+        printf("\nVoltaje canal %d: %.4f V\n", canal, voltaje1);
+        printf("\nVoltaje canal %d: %.4f V\n", canal+1, voltaje2);
 
-        /*switch(canal){
+        switch(canal){
             //corriente DC 1 y temp 1
             case 0:
                 temperaturaHumedad = voltajeATemperatura(voltaje2);

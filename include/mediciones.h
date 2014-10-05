@@ -109,6 +109,8 @@ float voltajeANivelCombustible(float voltaje);
 
 float *convertirAfloat();
 
+int convertirMinimosAfloat();
+
 
 #endif
 

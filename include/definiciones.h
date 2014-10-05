@@ -1,6 +1,10 @@
 #ifndef DEFINICIONES_H
 #define DEFINICIONES_H
 
+//los defines de abajo son necesarios para el que unistd.h pueda ser usado.
+#define _XOPEN_SOURCE 500
+#define _GNU_SOURCE
+
 #include <stdio.h>
 #include <signal.h>
 #include <unistd.h>
@@ -19,8 +23,8 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
-#include <mysql.h>
 #include <pthread.h>
+#include <unistd.h>
 #include <net-snmp/net-snmp-config.h>
 #include <net-snmp/net-snmp-includes.h>
 #include <net-snmp/agent/net-snmp-agent-includes.h>

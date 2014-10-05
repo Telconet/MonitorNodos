@@ -22,10 +22,10 @@ int enviarDatos(int des_archivo, void *valor, int tipo){
         int comando_int = COMANDO;
         struct comando *com_local = (struct comando *)valor;
         
-        
         //Le decimos al daemon que vamos a enviar un comando
         int n = send(des_archivo, &comando_int, sizeof(comando_int), 0);
-                     
+        
+                
         if( n == -1){
             perror("Fallo envio de mensaje\n");
             return -1;
@@ -129,7 +129,7 @@ int enviarDatos(int des_archivo, void *valor, int tipo){
             return -1;
         }
         
-        return 1;
+       	//return 0
     } 
 }
 
@@ -203,7 +203,7 @@ int recibirDatos(int des_archivo, void *buffer ,int tipo){
         for(i = 0; i < com_local->numero_argumentos; i++){
             
             char *buff = malloc((com_local->long_argumentos[i] + 1)*sizeof(char));            
-
+            memset(buff, 0, (com_local->long_argumentos[i] + 1));                          //AGREGADO
             n = recv(des_archivo, buff, com_local->long_argumentos[i], 0);
             com_local->argumentos[i] = buff;
             
@@ -253,7 +253,7 @@ int recibirDatos(int des_archivo, void *buffer ,int tipo){
         
         //Recibir el buffer con la respuesta
         char *buff = malloc((res_local->long_res + 1)*sizeof(char));            
-
+        memset(buff, 0, (res_local->long_res + 1));
         n = recv(des_archivo, buff, res_local->long_res, 0);
         res_local->res = buff;
             
@@ -265,5 +265,6 @@ int recibirDatos(int des_archivo, void *buffer ,int tipo){
             return -1;
         }
     }
-    return 1;    
+    return 0;    
 }
+
