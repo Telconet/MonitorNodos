@@ -40,7 +40,7 @@ DIO.o: source/DIO.c include/DIO.h
 	$(ARMCC) -g -fPIC -c -mcpu=arm9 -Wall -Wno-trigraphs -I $(DIR_ACTUAL)/include source/DIO.c -o obj/DIO.o
 
 archive:
-	tar -cf Backup/monitornodos-`date +%Y.%m.%d`_`date +%H.%M.%S`.tar *.c *.h README Makefile
+	tar -zvcf /home/eduardo/Documents/storage/backup_sist_telemetria/sistelemetria-`date +%Y.%m.%d`_`date +%H.%M.%S`.tar *
 
 clean:
 	rm -f obj/*.o bin/monnod
