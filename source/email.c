@@ -51,6 +51,8 @@ int enviarEMail(char *destinatario, char *asunto, char* de, char *mensaje){
     
     if(comando == NULL){
         printf("ERROR: No se pudo crear el comando de envio de e-mail\n");
+        free(nombreArchivo);
+        fclose(archivoEmail);
         return -1;
     }
 

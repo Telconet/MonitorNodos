@@ -247,21 +247,17 @@ int main(int argc, char *argv[]) {
     por segundo. Luego de los 14.675 minutos, programamos el crontab de tal forma que cada 15 minutos vuelva levantar
     el daemon de monitoreo.
     */
-    /*double inicio, fin=0;
-    double descanso=0;
-    inicio=clock()/CLOCKS_PER_SEC;*/
-    while (1){ //((fin + descanso) - inicio) < (60 * 13)) {
+    
+    while (1){
 
+	printf("2\n");
 	realizarMediciones(&listaMediciones);
         revisarStatusMediciones(listaMediciones);
 	status_puerto_DIO stp = statusPuerto(puerto_DIO_5);//Sensor del aire principal
 	status_puerto_DIO sts = statusPuerto(puerto_DIO_6);//Sensor del aire secundario
         almacenarMediciones(&listaMediciones, informacion_nodo.id, configuracion->rutaArchivoColumnasBDADC, NUMERO_MEDICIONES_ADC,stp,sts);
         //configuracion->valoresMinimosPermitidosMediciones, configuracion->numeroValoresMinimosPermitidos);
-        sleep(configuracion->intervaloMonitoreo); //damos tiempo que sensores se activen, etc.
-        //descanso += (configuracion->intervaloMonitoreo);	//tiempo que le toma a la función sleep ejecutarse
-	//fin=clock()/CLOCKS_PER_SEC;
-        //printf("\nTiempo: %.2f - %.2f = %.2f",fin,inicio, ((fin + descanso) - inicio));
+        //sleep(configuracion->intervaloMonitoreo); //damos tiempo que sensores se activen, etc.
 	
 	/*
 	Código donde se implementa el control automático de la temperatura de los nodos movistar. Se logra lo siguiente:
