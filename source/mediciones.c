@@ -202,13 +202,21 @@ int realizarMediciones(volatile struct medicion **med) { //CHECK!!!!!!!!!
 
         int tamanoBuffers = sizeof (uint16_t) * noMuestras;
         data_canal_1 = malloc(tamanoBuffers);
-        data_canal_2 = malloc(tamanoBuffers);
+        
 
         //Guardamos temperatura para cualquier compensacion que sea necesaria.
         temperatura = 25;
 
-        if (data_canal_2 == NULL || data_canal_1 == NULL) {
+        if (data_canal_1 == NULL) {
             printf("ERROR: No hay suficiente memoria para realizar las mediciones.\n");
+            return -1;
+        }
+        
+        data_canal_2 = malloc(tamanoBuffers);
+        
+        if (data_canal_2 == NULL) {
+            printf("ERROR: No hay suficiente memoria para realizar las mediciones.\n");
+            free(data_canal_1);
             return -1;
         }
 
@@ -366,6 +374,10 @@ void revisarStatusMediciones(volatile struct medicion *med) {
 
     int indiceCanalActivo = 0;
     int canalActual = 0;
+    
+    int tamanoString = 400;
+    char asunto[tamanoString];
+    char mensaje[tamanoString];
 
     //empezamos a verificar, para mandar alertas o no.
     if (med != NULL) {
@@ -373,11 +385,6 @@ void revisarStatusMediciones(volatile struct medicion *med) {
         while (i < NUMERO_CANALES_ADC) {
             j = 0;
             indiceCanalActivo = 0;
-            //indiceAlertas = 0;
-            //printf("i: %d, canalActual: %d, valor: %.2f, \n", i, canalActual, actual->valor);
-            //printf("Revisar mediciones: %.2f\n", actual->valor);
-
-            //printf("Numero de canales activos: %d\n", configuracion->numeroCanalesActivos);
 
             for (indiceCanalActivo = 0; indiceCanalActivo < configuracion->numeroCanalesActivos; indiceCanalActivo++) {
 
@@ -398,10 +405,6 @@ void revisarStatusMediciones(volatile struct medicion *med) {
                                     enviarTrap(ss[j], informacion_nodo.ip, SNMP_GENERICTRAP_ENTERSPECIFIC, TRAP_TEMPERATURA_ALTA, OID_TEMPERATURA_3, actual->valor);
                                 }
                             }
-
-                            int tamanoString = 300;
-                            char *asunto = malloc(sizeof (char) *tamanoString);
-                            char *mensaje = malloc(sizeof (char) *tamanoString);
 
                             pthread_mutex_lock(&mutexEmailsAlerta);
                             switch (canalActual) {
@@ -439,9 +442,6 @@ void revisarStatusMediciones(volatile struct medicion *med) {
                                     break;
                             }
                             pthread_mutex_unlock(&mutexEmailsAlerta);
-
-                            free(asunto);
-                            free(mensaje);
                         }
 
                         //printf("Revisando medicion %d = %.4f, j = %d, indiceMinimos = %d\n", i, actual->valor, j, indiceMinimos);
@@ -473,10 +473,6 @@ void revisarStatusMediciones(volatile struct medicion *med) {
                                     enviarTrap(ss[j], informacion_nodo.ip, SNMP_GENERICTRAP_ENTERSPECIFIC, TRAP_VOLTAJE_DC_BAJO, OID_VOLTAJE_DC_4, actual->valor);
                                 }
                             }
-
-                            int tamanoString = 300;
-                            char *asunto = malloc(sizeof (char) *tamanoString);
-                            char *mensaje = malloc(sizeof (char) *tamanoString);
 
                             pthread_mutex_lock(&mutexEmailsAlerta);
                             switch (canalActual) {
@@ -525,8 +521,6 @@ void revisarStatusMediciones(volatile struct medicion *med) {
                             }
                             pthread_mutex_unlock(&mutexEmailsAlerta);
 
-                            free(asunto);
-                            free(mensaje);
                         }
                     } else if ((i == CANAL_CORRIENTE_DC_1 || i == CANAL_CORRIENTE_DC_2 || i == CANAL_CORRIENTE_DC_3 || i == CANAL_CORRIENTE_DC_4) && minimos[indiceMinimos] > THRESHOLD_ACTIVACION_MEDICION) {
                         //Corriente DC   --> Mayor o menor?
@@ -584,10 +578,6 @@ void revisarStatusMediciones(volatile struct medicion *med) {
                                 }
                             }
 
-                            int tamanoString = 300;
-                            char *asunto = malloc(sizeof (char) *tamanoString);
-                            char *mensaje = malloc(sizeof (char) *tamanoString);
-
                             pthread_mutex_lock(&mutexEmailsAlerta);
                             switch (canalActual) {
                                 case CANAL_VOLTAJE_AC_1:
@@ -614,10 +604,6 @@ void revisarStatusMediciones(volatile struct medicion *med) {
                                     break;
                             }
                             pthread_mutex_unlock(&mutexEmailsAlerta);
-
-                            free(asunto);
-                            free(mensaje);
-
                         }
                     }
                 }

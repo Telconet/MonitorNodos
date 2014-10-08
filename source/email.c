@@ -22,6 +22,13 @@ int enviarEMail(char *destinatario, char *asunto, char* de, char *mensaje){
     snprintf(contenidoArchivo, TAMANO_MAX_EMAIL, "To: %s\nFrom: %s\nSubject: %s\n\n%s", destinatario, de, asunto, mensaje);     //CHECK REMOVi \0!!!
     
     char *nombreArchivo = malloc(sizeof(char)*200);
+    
+    if(nombreArchivo == NULL){
+        free(contenidoArchivo);
+        return -1;
+    }
+    
+    
     memset(nombreArchivo, 0, 200);
     
     sleep(3);
@@ -38,6 +45,13 @@ int enviarEMail(char *destinatario, char *asunto, char* de, char *mensaje){
     snprintf(nombreArchivo, 200, "%s_%d_%d", ARCHIVO_EMAIL_TEMPORAL,r1, r2);
     
     FILE *archivoEmail = fopen(nombreArchivo, "w");
+    
+    if(archivoEmail == NULL){
+        free(contenidoArchivo);
+        free(nombreArchivo);
+        return -1;
+    }
+    
     //Escribimos el archivo
     fwrite(contenidoArchivo, 1, strlen(contenidoArchivo),archivoEmail);
     fflush(archivoEmail);

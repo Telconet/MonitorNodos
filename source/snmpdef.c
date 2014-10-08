@@ -55,7 +55,7 @@ netsnmp_session *abrirSesion(netsnmp_session *sesion){
 netsnmp_session **abrirMultiplesSesiones(char **ip_servidor, int numero_servidores, char *nombre, char *comunidad, int versionSNMP){
     
     int i;
-    netsnmp_session **sesionesCreacion, **sesiones;
+    netsnmp_session **sesionesCreacion = NULL, **sesiones = NULL;
     
     sesionesCreacion = malloc(sizeof(*sesionesCreacion)*numero_servidores);
     sesiones = malloc(sizeof(*sesiones)*numero_servidores);
@@ -66,8 +66,13 @@ netsnmp_session **abrirMultiplesSesiones(char **ip_servidor, int numero_servidor
     }
     
     if(sesiones == NULL){
+        free(sesionesCreacion);
         printf("ERROR: No se pudieron crear las sesiones SNMP individuales.\n");
         return NULL;
+    }
+    
+    for(i = 0; i < numero_servidores; i++){
+        sesiones[i] = NULL;
     }
     
     for(i = 0; i < numero_servidores; i++){
@@ -78,9 +83,7 @@ netsnmp_session **abrirMultiplesSesiones(char **ip_servidor, int numero_servidor
             sesiones[i] = abrirSesion(sesionesCreacion[i]);
         }
     }
-    
-  
-    
+
     return sesiones;  
 }
 

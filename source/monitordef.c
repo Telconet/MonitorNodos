@@ -15,8 +15,12 @@ void salir(int status){
     //Cerramos el sistema SNMP
     if(status != EXIT_FAILURE){
         int i;
-        for(i = 0; i < configuracion->numeroServidoresSNMP; i++){
-            cerrarSistemaSnmp(ss[i]);
+        if(ss != NULL){
+            for(i = 0; i < configuracion->numeroServidoresSNMP; i++){
+                if(ss[i] != NULL){
+                    cerrarSistemaSnmp(ss[i]);
+                }
+            }
         }
     }
     
@@ -26,10 +30,7 @@ void salir(int status){
     strcpy(comandoRemover, COMANDO_REMOVER_ARCHIVO);
     strcat(comandoRemover, ARCHIVO_PROCESS_ID_DAEMON);
     system(comandoRemover);
-    
-    //Cerramos la base de datos
-    //cerrarBD(conexion);
-    
+
     exit(status);
 }
 
@@ -48,7 +49,7 @@ void manejarComandosControlador(void *sd){
     int sid2 = *sd_intptr;                           //obtenemos el valor apuntado por el puntero
     char pidControladorStr[6];
     int pidControlador = 0;
-    
+        
     //Inicializamos el buffer
     memset(mensaje, 0, MAX_BUFFER_SIZE);
     
@@ -85,7 +86,7 @@ void manejarComandosControlador(void *sd){
                 struct comando com;
                 
                 //Si no hubo errores, procesamos el comando
-                if(recibirDatos(sid2, &com, COMANDO) == 1){            //Agregar n =??
+                if(recibirDatos(sid2, &com, COMANDO) == 0){            //Agregar n =??
                                         
                     
                     procesarComando(sid2, &com);                              //Realizamos acciones pedidas
@@ -156,7 +157,6 @@ void temporizadorEnvioEmails(void *sd){
         }
         pthread_mutex_unlock(&mutexEmailsAlerta);
 
-        
         sleep(periodoSleep);
     }
 }
@@ -204,9 +204,15 @@ void monitorPuerta(void *sd){
     //Buffers para strings de memoria
     int tamanoString = 300;
     char *asunto = malloc(sizeof(char)*tamanoString);
+    
+    if(asunto == NULL){
+        printf("ERROR: Problema al asignar memoria para monitoreo de la puerta.\n");
+        return;
+    }
+    
     char *mensaje = malloc(sizeof(char)*tamanoString);
     
-    if(asunto == NULL || mensaje == NULL){
+    if(mensaje == NULL){
         printf("ERROR: Problema al asignar memoria para monitoreo de la puerta.\n");
         return;
     }

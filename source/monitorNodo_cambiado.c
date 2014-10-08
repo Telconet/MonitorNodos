@@ -128,12 +128,9 @@ int main(int argc, char *argv[]){
     printf("INFO: Monitoreando...\n");
     
     //Enviamos un email notificando que el monitor se ha (re)iniciado
-    char *mensaje = malloc(sizeof(char)*TAMANO_MAX_RESPUESTA);
-    char *asunto = malloc(sizeof(char)*TAMANO_MAX_RESPUESTA);
-    
-    if(mensaje == NULL || asunto == NULL){
-        salir(EXIT_SUCCESS);
-    }
+    char mensaje[TAMANO_MAX_RESPUESTA];
+    char asunto[TAMANO_MAX_RESPUESTA];
+
     memset(mensaje, 0, TAMANO_MAX_RESPUESTA);
     memset(asunto, 0, TAMANO_MAX_RESPUESTA);
     
@@ -142,10 +139,6 @@ int main(int argc, char *argv[]){
     
     enviarMultiplesEmails(configuracion->destinatariosAlertas, configuracion->numeroDestinatariosAlertas,
                           asunto, "", mensaje);
-    
-    free(mensaje);
-    free(asunto);
-    
     
     //*********PRUEBA ADC
     

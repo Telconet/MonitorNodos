@@ -108,7 +108,7 @@ int main(int argc, char *argv[]) {
 
     if (configuracion == NULL) {
         printf("ERROR: Existe un error en el formato del archivo de configuracion %s,revise la configuracion del mismo. Este programa se cerrara.\n", rutaArchivoConfiguracion);
-        salir(1);
+        salir(EXIT_FAILURE);
     }
 
     //Solo para informacion
@@ -249,14 +249,13 @@ int main(int argc, char *argv[]) {
     */
     
     while (1){
-
-	printf("2\n");
 	realizarMediciones(&listaMediciones);
         revisarStatusMediciones(listaMediciones);
 	status_puerto_DIO stp = statusPuerto(puerto_DIO_5);//Sensor del aire principal
 	status_puerto_DIO sts = statusPuerto(puerto_DIO_6);//Sensor del aire secundario
         almacenarMediciones(&listaMediciones, informacion_nodo.id, configuracion->rutaArchivoColumnasBDADC, NUMERO_MEDICIONES_ADC,stp,sts);
-        //configuracion->valoresMinimosPermitidosMediciones, configuracion->numeroValoresMinimosPermitidos);
+        
+	//configuracion->valoresMinimosPermitidosMediciones, configuracion->numeroValoresMinimosPermitidos);
         sleep(configuracion->intervaloMonitoreo); //damos tiempo que sensores se activen, etc.
 	
 	/*
