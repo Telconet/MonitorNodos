@@ -6,7 +6,7 @@
  *Rutina que inserta un registro en la base de datos
  */
 int insertarRegistro(char *nombreTabla, char **valores, int numeroValores, status_puerto_DIO stp, status_puerto_DIO sts) {
-    int i;
+    /*int i;
     int cont;
     
     int longitudFromUser  = 300;
@@ -65,6 +65,64 @@ int insertarRegistro(char *nombreTabla, char **valores, int numeroValores, statu
                 }
             }
         }
+        close(sockfd);
+        return 0;
+    }
+    return -1;*/
+    
+    int i;
+    int cont;
+
+    if (nombreTabla != NULL && valores != NULL && numeroValores > 0) {
+        int sockfd = 0, n;
+        char fromUser[300];
+        char recvBuff[1024];
+
+        struct sockaddr_in serv_addr;
+        int conn;
+
+        if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+            printf("\n Error : Could not create socket \n");
+            close(sockfd);
+            return -1;
+        }
+
+        strcpy(fromUser, valores[0]);
+        for (i = 1; i < numeroValores; i++) {
+            sprintf(fromUser, "%s,%s", fromUser, valores[i]);
+        }
+        sprintf(fromUser, "%s,%d,%d\n", fromUser,stp,sts);
+        //printf("\nQuery: '%s'->%d\n", fromUser, strlen(fromUser));
+
+        serv_addr.sin_family = AF_INET;
+        serv_addr.sin_port = htons(5000);
+        serv_addr.sin_addr.s_addr = inet_addr("172.40.0.10");
+
+        conn = connect(sockfd, (struct sockaddr *) &serv_addr, sizeof (serv_addr));
+        if (conn < 0) {
+            printf("\n Error : Connect Failed \n");
+            close(sockfd);
+            return -1;
+        }
+
+        cont = 0;
+        while ((n = read(sockfd, recvBuff, sizeof (recvBuff) - 1)) > 0) {
+            recvBuff[n - 1] = '\0';
+            printf("\nRcv: '%s'", recvBuff);
+            if(strcmp(recvBuff, "Inicio")==0){
+                write(sockfd, fromUser, strlen(fromUser));
+            }else if(strcmp(recvBuff, "OK")==0){
+                break;
+            }else{
+                cont++;
+                if(cont>3){
+                    break;
+                }else{
+                    write(sockfd, fromUser, strlen(fromUser));
+                }
+            }
+        }
+
         close(sockfd);
         return 0;
     }
