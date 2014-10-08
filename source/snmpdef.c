@@ -6,16 +6,12 @@
  */
 netsnmp_session *inicializarSistemaSnmp(char *ip_servidor,char *nombre, char *comunidad, int versionSNMP){
     
-    
-    
     netsnmp_session *sesion = malloc(sizeof(netsnmp_session));
-    
+        
     if(sesion == NULL){
         printf("ERROR: No se pudo crear la sesion SNMP.\n");
         return NULL;
     }
-  
-    
     
     //Inicializamos la libreria SNMP
     init_snmp(nombre);
@@ -32,6 +28,7 @@ netsnmp_session *inicializarSistemaSnmp(char *ip_servidor,char *nombre, char *co
     //nombre de comunidad usado para autenticación
     sesion->community = comunidad;
     sesion->community_len = strlen(sesion->community);
+  
     
     return sesion;
 }
