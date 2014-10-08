@@ -257,7 +257,7 @@ int main(int argc, char *argv[]) {
 	status_puerto_DIO sts = statusPuerto(puerto_DIO_6);//Sensor del aire secundario
         almacenarMediciones(&listaMediciones, informacion_nodo.id, configuracion->rutaArchivoColumnasBDADC, NUMERO_MEDICIONES_ADC,stp,sts);
         //configuracion->valoresMinimosPermitidosMediciones, configuracion->numeroValoresMinimosPermitidos);
-        //sleep(configuracion->intervaloMonitoreo); //damos tiempo que sensores se activen, etc.
+        sleep(configuracion->intervaloMonitoreo); //damos tiempo que sensores se activen, etc.
 	
 	/*
 	Código donde se implementa el control automático de la temperatura de los nodos movistar. Se logra lo siguiente:
