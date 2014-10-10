@@ -3,7 +3,6 @@
 
 #include "definiciones.h"
 #include "utilidades.h"
-#include "snmpdef.h"
 #include "modBD.h"
 #include "email.h"
 #include "mediciones.h"
@@ -81,7 +80,7 @@ int sd1, sd2;                                                         //Descript
 pid_t processID;                                                      //Nuestro pid
 pthread_t localComandosThread, monPuertaThread, tiempoEmailsThread;   //thread de comandos, puerta y temporizador
 struct nodo informacion_nodo;                                         //Informacion del nodo
-netsnmp_session **ss;                                                 //Sesiones SNMP
+//netsnmp_session **ss;                                                 //Sesiones SNMP
 struct configuracionMonitor* configuracion;                           //configuracion del monitor
 volatile struct medicion *listaMediciones;                            //La lista de las mediciones mas actuales
 

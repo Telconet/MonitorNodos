@@ -81,7 +81,7 @@ struct medicion *crearMedicion(int tipo, int id, int valor, int status);
 
 int realizarMediciones(volatile struct medicion **med);
 
-void revisarStatusMediciones(volatile struct medicion *med);
+//void revisarStatusMediciones(volatile struct medicion *med);
 
 int almacenarMediciones(volatile struct medicion **med, char *nombreNodo, char* rutaArchivoTipoColumnas, int numeroValores, status_puerto_DIO stp, status_puerto_DIO sts);
 

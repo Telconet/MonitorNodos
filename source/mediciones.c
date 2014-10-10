@@ -343,7 +343,7 @@ int realizarMediciones(volatile struct medicion **med) { //CHECK!!!!!!!!!
  *ch20 - Corriente AC 2     16
  *ch21 - voltaje DC 1       17
  */
-void revisarStatusMediciones(volatile struct medicion *med) {
+/*void revisarStatusMediciones(volatile struct medicion *med) {
 
     int i = 0;
     int j = 0;
@@ -538,22 +538,7 @@ void revisarStatusMediciones(volatile struct medicion *med) {
                             }
                         }
                     } else if ((i == CANAL_CORRIENTE_AC_3 || i == CANAL_CORRIENTE_AC_4 || i == CANAL_CORRIENTE_AC_2 || i == CANAL_CORRIENTE_AC_1) && minimos[indiceMinimos] > THRESHOLD_ACTIVACION_MEDICION) {
-                        //corriente AC  - alarma si corriente es menor que. Y mayor q???
-                        //DATACENTER
-                        /*
-                        if (actual->valor < minimos[indiceMinimos]) {
-                            for (j = 0; j < configuracion->numeroServidoresSNMP; j++) {
-                                if (i == CANAL_CORRIENTE_AC_1) {
-                                    enviarTrap(ss[j], informacion_nodo.ip, SNMP_GENERICTRAP_ENTERSPECIFIC, TRAP_CORRIENTE_AC_ALTA, OID_CORRIENTE_AC_1, actual-> valor);
-                                } else if (i == CANAL_CORRIENTE_AC_2) {
-                                    enviarTrap(ss[j], informacion_nodo.ip, SNMP_GENERICTRAP_ENTERSPECIFIC, TRAP_CORRIENTE_AC_ALTA, OID_CORRIENTE_AC_2, actual-> valor);
-                                } else if (i == CANAL_CORRIENTE_AC_3) {
-                                    enviarTrap(ss[j], informacion_nodo.ip, SNMP_GENERICTRAP_ENTERSPECIFIC, TRAP_CORRIENTE_AC_ALTA, OID_CORRIENTE_AC_3, actual-> valor);
-                                } else if (i == CANAL_CORRIENTE_AC_4) {
-                                    enviarTrap(ss[j], informacion_nodo.ip, SNMP_GENERICTRAP_ENTERSPECIFIC, TRAP_CORRIENTE_AC_ALTA, OID_CORRIENTE_AC_4, actual-> valor);
-                                }
-                            }
-                        }*/
+                        
                         if (actual->valor > minimos[indiceMinimos]) {
                             for (j = 0; j < configuracion->numeroServidoresSNMP; j++) {
                                 if (i == CANAL_CORRIENTE_AC_1) {
@@ -657,7 +642,7 @@ void revisarStatusMediciones(volatile struct medicion *med) {
     } else {
         printf("med es igual a NULL\n");
     }
-}
+}*/
 
 /**
  *Rutina que almacena los valores de las mediciones en la base de datos.

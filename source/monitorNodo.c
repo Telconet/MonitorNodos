@@ -114,18 +114,17 @@ int main(int argc, char *argv[]) {
     //Solo para informacion
     configuracion->interfazRed = obtenerInterfazDeRed();
 
-
     //Esta rutina inicializa todo el sistema de mediciones
     //(asigna memoria, inicializa y configura el ADC, etc)
     inicializarSistemaMediciones(NUMERO_MUESTRAS, NUMERO_MAXIMO_CANALES_ADC);
 
     //Configuramos el servidor SNMP. SESION DEBE ABRIRSE ANTES DE CREAR THREAD DE MONITOREO DE PUERTA.
-    ss = abrirMultiplesSesiones(configuracion->ipServidorSNMP, configuracion->numeroServidoresSNMP,
+    /*ss = abrirMultiplesSesiones(configuracion->ipServidorSNMP, configuracion->numeroServidoresSNMP,
             configuracion->nombreSesionSNMP, configuracion->comunidadSNMP, SNMP_VERSION_1);
 
     if (ss == NULL) {
         printf("ERROR: no se pudo abrir la sesion SNMP.\n");
-    }
+    }*/
 
     //Iniciamos los puerto DIO como salida
     configurarPuertosDIO();
@@ -165,10 +164,10 @@ int main(int argc, char *argv[]) {
     }
 
     //Creamos un thread que va a llevar el control de cuando fue la ultima alerta
-    int tTiempoEmails;
+    //int tTiempoEmails;
 
-    pthread_mutex_init(&mutexEmailsAlerta, NULL);
-    tTiempoEmails = pthread_create(&tiempoEmailsThread, NULL, (void *)temporizadorEnvioEmails, (void *) configuracion);
+    /*pthread_mutex_init(&mutexEmailsAlerta, NULL);
+    tTiempoEmails = pthread_create(&tiempoEmailsThread, NULL, (void *)temporizadorEnvioEmails, (void *) configuracion);*/
 
     if (tPuerta != 0) {
         perror("ALERTA: No se pudo crear el thread de monitoreo de la puerta de acceso. Saliendo...\n");
@@ -182,13 +181,13 @@ int main(int argc, char *argv[]) {
     }
 
     printf("INFO: Direccion IP del monitor de nodo: %s\n", informacion_nodo.ip);
-    printf("INFO: Se inicializo el servidor SNMP.\n");
+    //printf("INFO: Se inicializo el servidor SNMP.\n");
 
     //Trap de inicio frio
-    int j;
+    /*int j;
     for (j = 0; j < configuracion->numeroServidoresSNMP; j++) {
         enviarTrap(ss[j], informacion_nodo.ip, SNMP_GENERICTRAP_COLDSTART, 0, NULL, -1.0f);
-    }
+    }*/
 
     //Creamos la lista de mediciones 
     listaMediciones = inicializarListaMediciones(NUMERO_MEDICIONES_ADC);
@@ -250,7 +249,7 @@ int main(int argc, char *argv[]) {
     
     while (1){
 	realizarMediciones(&listaMediciones);
-        revisarStatusMediciones(listaMediciones);
+        //revisarStatusMediciones(listaMediciones);
 	status_puerto_DIO stp = statusPuerto(puerto_DIO_5);//Sensor del aire principal
 	status_puerto_DIO sts = statusPuerto(puerto_DIO_6);//Sensor del aire secundario
         almacenarMediciones(&listaMediciones, informacion_nodo.id, configuracion->rutaArchivoColumnasBDADC, NUMERO_MEDICIONES_ADC,stp,sts);

@@ -13,7 +13,7 @@ void salir(int status){
     close(sd2);
     
     //Cerramos el sistema SNMP
-    if(status != EXIT_FAILURE){
+    /*if(status != EXIT_FAILURE){
         int i;
         if(ss != NULL){
             for(i = 0; i < configuracion->numeroServidoresSNMP; i++){
@@ -22,7 +22,7 @@ void salir(int status){
                 }
             }
         }
-    }
+    }*/
     
     //Removemos el archivo con el pid    
     char comandoRemover[strlen(ARCHIVO_PROCESS_ID_DAEMON) + strlen(COMANDO_REMOVER_ARCHIVO)];
@@ -187,22 +187,22 @@ void monitorPuerta(void *sd){
         printf("INFO: La puerta de acceso al nodo esta siendo monitoreada. Puerta cerrada.\n");
         
         //mandar trap de notificacion
-        for(j = 0; j < configuracion->numeroServidoresSNMP; j++){
+        /*for(j = 0; j < configuracion->numeroServidoresSNMP; j++){
             enviarTrap(ss[j], informacion_nodo.ip, SNMP_GENERICTRAP_ENTERSPECIFIC, TRAP_PUERTA_CERRADA, NULL, 0.0f);
-        }
+        }*/
     }
     else if(sensorPuerta == PUERTO_ON){
         //La puerta estaba abierta
         puertaAbiertaUltMed = ABIERTO;
         printf("INFO: La puerta de acceso al nodo esta siendo monitoreada. Puerta abierta.\n");
         //mandar trap de notificacion
-        for(j = 0; j < configuracion->numeroServidoresSNMP; j++){
+        /*for(j = 0; j < configuracion->numeroServidoresSNMP; j++){
             enviarTrap(ss[j], informacion_nodo.ip, SNMP_GENERICTRAP_ENTERSPECIFIC, TRAP_PUERTA_ABIERTA, NULL, 0.0f);
-        }
+        }*/
     }
     
     //Buffers para strings de memoria
-    int tamanoString = 300;
+    /*int tamanoString = 300;
     char *asunto = malloc(sizeof(char)*tamanoString);
     
     if(asunto == NULL){
@@ -215,7 +215,8 @@ void monitorPuerta(void *sd){
     if(mensaje == NULL){
         printf("ERROR: Problema al asignar memoria para monitoreo de la puerta.\n");
         return;
-    }
+    }*/
+    
     //Empezamos a monitorear la puerta regularmente.
     while(1){
         
@@ -235,16 +236,18 @@ void monitorPuerta(void *sd){
             
             printf("INFO: La puerta de acceso al nodo ha sido cerrada.\n");
             
-            for(j = 0; j < configuracion->numeroServidoresSNMP; j++){
+            /*for(j = 0; j < configuracion->numeroServidoresSNMP; j++){
                 enviarTrap(ss[j], informacion_nodo.ip, SNMP_GENERICTRAP_ENTERSPECIFIC, TRAP_PUERTA_CERRADA, NULL, 0.0f);
-            }
+            }*/
             
             //Enviamos mail de alerta.                            
-            memset(asunto, 0, tamanoString);
+            /*memset(asunto, 0, tamanoString);
             memset(mensaje, 0, tamanoString);
             snprintf(asunto, tamanoString, "ALERTA NODO %s: Puerta de nodo cerrada.",informacion_nodo.id);
             snprintf(mensaje, tamanoString, "La puerta del nodo %s ha sido cerrada.",informacion_nodo.id);
-            enviarMultiplesEmails(configuracion->destinatariosAlertas, configuracion->numeroDestinatariosAlertas, asunto, "monitornodos@telconet.net", mensaje);
+            enviarMultiplesEmails(configuracion->destinatariosAlertas, configuracion->numeroDestinatariosAlertas, asunto, "monitornodos@telconet.net", mensaje);*/
+            
+            //TODO insertar registro...
 
         }
         else if(sensorPuerta == PUERTO_ON && puertaAbiertaUltMed == CERRADO){
@@ -253,15 +256,17 @@ void monitorPuerta(void *sd){
             
             printf("INFO: La puerta de acceso al nodo ha sido abierta.\n");
             
-            for(j = 0; j < configuracion->numeroServidoresSNMP; j++){
+            /*for(j = 0; j < configuracion->numeroServidoresSNMP; j++){
                 enviarTrap(ss[j], informacion_nodo.ip, SNMP_GENERICTRAP_ENTERSPECIFIC, TRAP_PUERTA_ABIERTA, NULL, 0.0f);
-            }
+            }*/
             
-            memset(asunto, 0, tamanoString);
+            /*memset(asunto, 0, tamanoString);
             memset(mensaje, 0, tamanoString);
             snprintf(asunto, tamanoString, "ALERTA NODO %s: Puerta de nodo abierta.", informacion_nodo.id);
             snprintf(mensaje, tamanoString, "La puerta del nodo %s ha sido abierta.", informacion_nodo.id);
-            enviarMultiplesEmails(configuracion->destinatariosAlertas, configuracion->numeroDestinatariosAlertas, asunto, "monitornodos@telconet.net", mensaje);
+            enviarMultiplesEmails(configuracion->destinatariosAlertas, configuracion->numeroDestinatariosAlertas, asunto, "monitornodos@telconet.net", mensaje);*/
+            
+            //TODO insertar registro...
         }
         else if(sensorPuerta == PUERTO_ON && puertaAbiertaUltMed == ABIERTO){
             //
@@ -269,8 +274,9 @@ void monitorPuerta(void *sd){
         usleep(intervaloMonitoreo*1000);        //convertir usecs a msecs
     }
     
+    /*
     free(asunto);
-    free(mensaje);
+    free(mensaje);*/
 }
 
 /**
@@ -538,7 +544,7 @@ int procesarComando(int fd, struct comando *com)
                 
             }
             break;
-        case INFORMACION_CONF:
+        /*case INFORMACION_CONF:
             res.status = OK;
             
             //Obtenemos los servidores SNMP
@@ -574,15 +580,10 @@ int procesarComando(int fd, struct comando *com)
                 char bufferNumero[20];
                 memset(bufferNumero, 0, 20);
                 sprintf(bufferNumero, "%.2f", ((float)(configuracion->intervaloMonitoreo)) / ((float)(SEGUNDOS_POR_MINUTO)));
-                /*strcat(buffer,bufferNumero);
-                strcat(buffer," minuto(s)\n");*/
                 
                 char bufferNumero2[20];
                 memset(bufferNumero2, 0, 20);
                 sprintf(bufferNumero2, "%.2f", ((float)configuracion->intervaloMonitoreoPuerta) / 1000.0f);
-                /*strcat(buffer,"Intervalo de monitoreo de puerta: ");
-                strcat(buffer,bufferNumero);
-                strcat(buffer," segundo(s)");*/
                 
                 snprintf(buffer, lon, "Interfaz de red del monitor: %s\nDireccion IP del monitor: %s\nDireccion IP del servidor de base de datos: %s\nArchivo de columnas de base de datos: %s\n%s\nIntervalo de monitoreo: %s minuto(s)\nIntervalo de monitoreo de puerta: %s segundo(s)",
                          configuracion->interfazRed,
@@ -600,7 +601,7 @@ int procesarComando(int fd, struct comando *com)
                 free(servidoresSNMP);
             }
             else return -1;
-            break;
+            break;*/
         case INFORMACION_VAL_MIN:
             buffer = malloc(longitudMinimaBuffer);
             
@@ -1100,7 +1101,7 @@ struct configuracionMonitor* leerArchivoConfiguracion(char *rutaArchivo){
                         configuracion->numeroServidoresSNMP = num; 
                         int i;
                         for(i = 0; i < configuracion->numeroServidoresSNMP; i++){
-                            printf("INFO: IP del servidor SNMP %d: %s\n", (i+1), configuracion->ipServidorSNMP[i]);
+                            //printf("INFO: IP del servidor SNMP %d: %s\n", (i+1), configuracion->ipServidorSNMP[i]);
                         }
                     }
                     else return NULL;
@@ -1109,7 +1110,7 @@ struct configuracionMonitor* leerArchivoConfiguracion(char *rutaArchivo){
                     valores = obtenerValorConfig(linea, &num);
                     if(valores != NULL){
                         configuracion->comunidadSNMP = valores[0];
-                         printf("INFO: Comunidad SNMP: %s\n", configuracion->comunidadSNMP);
+                        // printf("INFO: Comunidad SNMP: %s\n", configuracion->comunidadSNMP);
                     }
                     else return NULL;
                 }
@@ -1117,7 +1118,7 @@ struct configuracionMonitor* leerArchivoConfiguracion(char *rutaArchivo){
                     valores = obtenerValorConfig(linea, &num);
                     if(valores != NULL){
                         configuracion->nombreSesionSNMP = valores[0];
-                        printf("INFO: Sesion SNMP: %s\n", configuracion->nombreSesionSNMP);
+                        //printf("INFO: Sesion SNMP: %s\n", configuracion->nombreSesionSNMP);
                     }
                     else return NULL;
                 }
