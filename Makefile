@@ -4,11 +4,10 @@ ARMCC=/usr/local/opt/crosstool/arm-linux/gcc-3.3.4-glibc-2.3.2/arm-linux/bin/gcc
 BASE=/usr/local/opt/crosstool/arm-linux/gcc-3.3.4-glibc-2.3.2/arm-linux/bin 
 DIR_ACTUAL=`pwd`
 LIBRERIASOS=/usr/local/opt/crosstool/arm-linux/gcc-3.3.4-glibc-2.3.2/arm-linux/bin/lib
-LIBRERIASSNMP=/usr/local/opt/crosstool/arm-linux/gcc-3.3.4-glibc-2.3.2/arm-linux/usr/local/lib/libnetsnmp.a
 INCLUDESNMP=/usr/local/opt/crosstool/arm-linux/gcc-3.3.4-glibc-2.3.2/arm-linux/net-snmp-5.6.2/include
 
 monnod: ADC.o monitorNodo.o utilidades.o IPC.o monitordef.o modBD.o email.o mediciones.o DIO.o
-	$(ARMCC) -Wall -fPIC -Wno-trigraphs -mcpu=arm9 -lpthread -lm -o bin/monnod -g lib/tsadclib1624.o obj/ADC.o obj/monitorNodo.o obj/utilidades.o obj/IPC.o obj/monitordef.o     obj/modBD.o obj/email.o obj/mediciones.o obj/DIO.o
+	$(ARMCC) -Wall -fPIC -Wno-trigraphs -mcpu=arm9 -o bin/monnod -g lib/tsadclib1624.o obj/ADC.o obj/monitorNodo.o obj/utilidades.o obj/IPC.o obj/monitordef.o  obj/modBD.o obj/email.o obj/mediciones.o obj/DIO.o -static -lpthread -lm
 
 ADC.o: source/ADC.c include/ADC.h
 	$(ARMCC) -c -fPIC -mcpu=arm9 -Wall -Wno-trigraphs -I $(DIR_ACTUAL)/include source/ADC.c -o obj/ADC.o
