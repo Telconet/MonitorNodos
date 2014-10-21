@@ -174,7 +174,7 @@ int main(int argc, char *argv[]) {
     }
 
     //Ya que no tenemos un RTC, actualizamos la fecha silenciosamente
-    if (system("ntpdate -s -u ntp.telconet.net")) {
+    if (system("ntpdate -s -h ntp.telconet.net")) {
         printf("ERROR: No se pudo actualizar la fecha.\n");
     } else {
         printf("INFO: Se ha actualizado la fecha correctamente.\n");
@@ -205,7 +205,7 @@ int main(int argc, char *argv[]) {
     free(hora);
 
     //Enviamos un email notificando que el monitor se ha (re)iniciado
-    char *mensaje = malloc(sizeof (char) *TAMANO_MAX_RESPUESTA);
+    /*char *mensaje = malloc(sizeof (char) *TAMANO_MAX_RESPUESTA);
     char *asunto = malloc(sizeof (char) *TAMANO_MAX_RESPUESTA);
 
     if (mensaje == NULL || asunto == NULL) {
@@ -220,7 +220,7 @@ int main(int argc, char *argv[]) {
     enviarMultiplesEmails(configuracion->destinatariosAlertas, configuracion->numeroDestinatariosAlertas,
             asunto, "monitornodos@telconet.net", mensaje);
     free(mensaje);
-    free(asunto);
+    free(asunto);*/
 
     //*********PRUEBA ADC
     /*

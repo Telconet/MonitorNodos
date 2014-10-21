@@ -195,7 +195,8 @@ void monitorPuerta(void *sd){
         //La puerta estaba abierta
         puertaAbiertaUltMed = ABIERTO;
         printf("INFO: La puerta de acceso al nodo esta siendo monitoreada. Puerta abierta.\n");
-        //mandar trap de notificacion
+        
+        //mandar notificacion
         /*for(j = 0; j < configuracion->numeroServidoresSNMP; j++){
             enviarTrap(ss[j], informacion_nodo.ip, SNMP_GENERICTRAP_ENTERSPECIFIC, TRAP_PUERTA_ABIERTA, NULL, 0.0f);
         }*/
@@ -236,18 +237,16 @@ void monitorPuerta(void *sd){
             
             printf("INFO: La puerta de acceso al nodo ha sido cerrada.\n");
             
-            /*for(j = 0; j < configuracion->numeroServidoresSNMP; j++){
-                enviarTrap(ss[j], informacion_nodo.ip, SNMP_GENERICTRAP_ENTERSPECIFIC, TRAP_PUERTA_CERRADA, NULL, 0.0f);
-            }*/
             
-            //Enviamos mail de alerta.                            
-            /*memset(asunto, 0, tamanoString);
-            memset(mensaje, 0, tamanoString);
-            snprintf(asunto, tamanoString, "ALERTA NODO %s: Puerta de nodo cerrada.",informacion_nodo.id);
-            snprintf(mensaje, tamanoString, "La puerta del nodo %s ha sido cerrada.",informacion_nodo.id);
-            enviarMultiplesEmails(configuracion->destinatariosAlertas, configuracion->numeroDestinatariosAlertas, asunto, "monitornodos@telconet.net", mensaje);*/
+            char *hora = obtenerHora();
+            char *fecha = obtenerFecha();
             
-            //TODO insertar registro...
+            //Mandamos notificacion al servidor
+            insertarEvento(atoi(configuracion->id_nodo), fecha, hora, "puerta cerrada");
+            
+            free(fecha);
+            free(hora);
+        
 
         }
         else if(sensorPuerta == PUERTO_ON && puertaAbiertaUltMed == CERRADO){
@@ -256,27 +255,23 @@ void monitorPuerta(void *sd){
             
             printf("INFO: La puerta de acceso al nodo ha sido abierta.\n");
             
-            /*for(j = 0; j < configuracion->numeroServidoresSNMP; j++){
-                enviarTrap(ss[j], informacion_nodo.ip, SNMP_GENERICTRAP_ENTERSPECIFIC, TRAP_PUERTA_ABIERTA, NULL, 0.0f);
-            }*/
+            char *hora = obtenerHora();
+            char *fecha = obtenerFecha();
             
-            /*memset(asunto, 0, tamanoString);
-            memset(mensaje, 0, tamanoString);
-            snprintf(asunto, tamanoString, "ALERTA NODO %s: Puerta de nodo abierta.", informacion_nodo.id);
-            snprintf(mensaje, tamanoString, "La puerta del nodo %s ha sido abierta.", informacion_nodo.id);
-            enviarMultiplesEmails(configuracion->destinatariosAlertas, configuracion->numeroDestinatariosAlertas, asunto, "monitornodos@telconet.net", mensaje);*/
+            //Mandamos notificacion al servidor
+            insertarEvento(atoi(configuracion->id_nodo), fecha, hora, "puera abierta");
             
-            //TODO insertar registro...
+            free(fecha);
+            free(hora);
+        
+            
+            
         }
         else if(sensorPuerta == PUERTO_ON && puertaAbiertaUltMed == ABIERTO){
             //
         }
         usleep(intervaloMonitoreo*1000);        //convertir usecs a msecs
     }
-    
-    /*
-    free(asunto);
-    free(mensaje);*/
 }
 
 /**

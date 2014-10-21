@@ -8,6 +8,8 @@
 
 int insertarRegistro(char *nombreTabla, char **valores, int numeroValores, status_puerto_DIO stp, status_puerto_DIO sts);
 
+int insertarEvento(int id_nodo, char *fecha, char *hora, char *evento);
+
 char **leerArchivoTipoColumnas(char *rutaArchivo, int *numeroColumnas);
 
 int necesitaApostrofe(char *tipo);
