@@ -1,5 +1,7 @@
 #include "mediciones.h"
 
+//#define DATACENTER
+
 
 int *canalesActivos;
 
@@ -230,6 +232,7 @@ int realizarMediciones(volatile struct medicion **med) { //CHECK!!!!!!!!!
         //TODO: Si el canal no esta siendo USADO, sobretodo el de corriente AC, almancenar CERO!!!
         //USAR LISTA DE CANALES ACTIVOS.
         for (i = 0; i < NUMERO_CANALES_ADC; i++) {
+        
 
             //el ADC se lee en las iteraciones pares.
             if (i % 2 == 0) {
@@ -292,8 +295,8 @@ int realizarMediciones(volatile struct medicion **med) { //CHECK!!!!!!!!!
             } else if (i == CANAL_CORRIENTE_AC_1 || i == CANAL_CORRIENTE_AC_2 || i == CANAL_CORRIENTE_AC_3 || i == CANAL_CORRIENTE_AC_4) {
                 //DATACENTER
                 //actual->valor = voltajeACorrienteAC(data_canal_1, noMuestras, rango); //Corriente AC solo esta en canales pares.
-                actual->valor = voltajeACorrienteDC(voltajeADC);
-                //printf("\nSe ha obtenido la medicion del canal %d: %.2f, Corriente AC: %.2f A RMS\n", i, voltajeADC, actual->valor);
+                actual->valor = voltajeACorrienteAC(data_canal_1, noMuestras, rango);
+                printf("\nSe ha obtenido la medicion del canal %d: %.2f, Corriente AC: %.2f A RMS\n", i, voltajeADC, actual->valor);
                 actual = actual->siguiente;
             } else if (i == CANAL_VOLTAJE_AC_1 || i == CANAL_VOLTAJE_AC_2) {
                 //Voltaje AC
@@ -315,334 +318,6 @@ int realizarMediciones(volatile struct medicion **med) { //CHECK!!!!!!!!!
 
 }
 
-/**
- *Esta rutina verifica que las mediciones esten dentro de los
- *valores permitidos. En caso de no ser asi, enviara las alertas
- *
- *Si en el archivo de los minimos, el minimo es menor a THRESHOLD_ACTIVACION_MEDICION, 
- *se desahbilita esa medicion.
- *
- *Las mediciones estan almacenadas en el siguiente orden:
- *                          i
- *ch0 - Corriente DC 1      0
- *ch1 - temperatura 1       1
- *ch2 - Corriente AC 3      2
- *ch3 - voltaje DC 2        3
- *ch4 - Corriente DC 2      4
- *ch5 - temperatura 2       5   
- *ch6 - Corriente AC 4      6
- *ch7 - voltaje DC 3        7
- *ch8 - Corriente DC 3      8
- *ch9 - temperatura 3       9
- *ch11 - voltaje DC 4       10
- *ch12 - Corriente DC 4     11
- *ch13 - voltaje AC 1       12
- *ch15 - humedad            13
- *ch16 - Corriente AC 1     14
- *ch17 - voltaje AC 2       15
- *ch20 - Corriente AC 2     16
- *ch21 - voltaje DC 1       17
- */
-/*void revisarStatusMediciones(volatile struct medicion *med) {
-
-    int i = 0;
-    int j = 0;
-    int indiceMinimos = 0;
-    volatile struct medicion *actual = med;
-
-#ifdef DEBUG
-    printf("INFO: Revisando mediciones...\n");
-#endif
-
-    //Sacamos la lista de mediciones inactivos
-    //PAra estos no enviamos alertas.
-    //canalesActivos = malloc(sizeof(int)*configuracion->numeroCanalesActivos);
-    //printf("Memoria asignada canales activos: %d\n", sizeof(int)*configuracion->numeroCanalesActivos);
-
-    if (canalesActivos == NULL) {
-        printf("ERROR: Problemas al asignar memoria en revisarStatusMediciones\n");
-        return;
-    }
-
-    //printf("numeroCanalesActivos: %d\n", configuracion->numeroCanalesActivos);
-
-    int w = 0;
-    for (w = 0; w < configuracion->numeroCanalesActivos; w++) {
-        canalesActivos[w] = atoi(configuracion->canalesActivos[w]);
-        //printf("canal: %s\n", configuracion->canalesActivos[w]);
-    }
-
-    int indiceCanalActivo = 0;
-    int canalActual = 0;
-    
-    int tamanoString = 400;
-    char asunto[tamanoString];
-    char mensaje[tamanoString];
-
-    //empezamos a verificar, para mandar alertas o no.
-    if (med != NULL) {
-
-        while (i < NUMERO_CANALES_ADC) {
-            j = 0;
-            indiceCanalActivo = 0;
-
-            for (indiceCanalActivo = 0; indiceCanalActivo < configuracion->numeroCanalesActivos; indiceCanalActivo++) {
-
-                //Si el numero de canal esta en la lista, le permitimos seguir y mandar alertas. CHECK.
-                if (actual != NULL && i == canalesActivos[indiceCanalActivo]) {
-
-                    if ((i == CANAL_TEMPERATURA_1 || i == CANAL_COMBUSTIBLE || i == CANAL_GENERADOR) && minimos[indiceMinimos] > THRESHOLD_ACTIVACION_MEDICION) { //CHECK
-                        //temperatura
-                        if (actual->valor > minimos[indiceMinimos]) {
-                            for (j = 0; j < configuracion->numeroServidoresSNMP; j++) {
-                                if (i == CANAL_TEMPERATURA_1) {
-                                    enviarTrap(ss[j], informacion_nodo.ip, SNMP_GENERICTRAP_ENTERSPECIFIC, TRAP_TEMPERATURA_ALTA, OID_TEMPERATURA_1, actual->valor);
-                                } else if (i == CANAL_COMBUSTIBLE) {
-                                    //Rele NC a GND, combustible > 20 %
-                                    enviarTrap(ss[j], informacion_nodo.ip, SNMP_GENERICTRAP_ENTERSPECIFIC, TRAP_TEMPERATURA_ALTA, OID_TEMPERATURA_2, actual->valor);
-                                } else if (i == CANAL_GENERADOR) {
-                                    //Rele NC a GND, Generador apagado
-                                    enviarTrap(ss[j], informacion_nodo.ip, SNMP_GENERICTRAP_ENTERSPECIFIC, TRAP_TEMPERATURA_ALTA, OID_TEMPERATURA_3, actual->valor);
-                                }
-                            }
-
-                            pthread_mutex_lock(&mutexEmailsAlerta);
-                            switch (canalActual) {
-                                case CANAL_TEMPERATURA_1:
-                                    if (!alertaEmailEnviada[1]) { //Si no se ha enviado email...
-                                        memset(asunto, 0, tamanoString);
-                                        memset(mensaje, 0, tamanoString);
-                                        snprintf(asunto, tamanoString, "ALERTA NODO: Temperatura 1 Alta.");
-                                        snprintf(mensaje, tamanoString, "La temperatura 1 del nodo %s es %.2f °C.", informacion_nodo.id, actual->valor);
-                                        enviarMultiplesEmails(configuracion->destinatariosAlertas, configuracion->numeroDestinatariosAlertas, asunto, "monitornodos@telconet.net", mensaje);
-                                        alertaEmailEnviada[1] = 1;
-                                    }
-                                    break;
-                                case CANAL_COMBUSTIBLE:
-                                    if (!alertaEmailEnviada[5]) {
-                                        memset(asunto, 0, tamanoString);
-                                        memset(mensaje, 0, tamanoString);
-                                        snprintf(asunto, tamanoString, "ALERTA NODO: Combustible bajo.");
-                                        snprintf(mensaje, tamanoString, "El nivel de combustible del nodo %s es bajo.", informacion_nodo.id);
-                                        enviarMultiplesEmails(configuracion->destinatariosAlertas, configuracion->numeroDestinatariosAlertas, asunto, "monitornodos@telconet.net", mensaje);
-                                        alertaEmailEnviada[5] = 1;
-                                    }
-                                    break;
-                                case CANAL_GENERADOR:
-                                    if (!alertaEmailEnviada[9]) {
-                                        memset(asunto, 0, tamanoString);
-                                        memset(mensaje, 0, tamanoString);
-                                        snprintf(asunto, tamanoString, "ALERTA NODO: Generador encendido.");
-                                        snprintf(mensaje, tamanoString, "El generador del nodo %s esta encendido.", informacion_nodo.id);
-                                        enviarMultiplesEmails(configuracion->destinatariosAlertas, configuracion->numeroDestinatariosAlertas, asunto, "monitornodos@telconet.net", mensaje);
-                                        alertaEmailEnviada[9] = 1;
-                                    }
-                                    break;
-                                default:
-                                    break;
-                            }
-                            pthread_mutex_unlock(&mutexEmailsAlerta);
-                        }
-
-                        //printf("Revisando medicion %d = %.4f, j = %d, indiceMinimos = %d\n", i, actual->valor, j, indiceMinimos);
-                        //indiceMinimos++;
-                        //actual = actual->siguiente;
-
-                    } else if (i == CANAL_HUMEDAD && minimos[indiceMinimos] > THRESHOLD_ACTIVACION_MEDICION) {
-                        //humedad
-                        if (actual->valor > minimos[indiceMinimos]) {
-                            for (j = 0; j < configuracion->numeroServidoresSNMP; j++) {
-                                enviarTrap(ss[j], informacion_nodo.ip, SNMP_GENERICTRAP_ENTERSPECIFIC, TRAP_HUMEDAD_ALTA, OID_HUMEDAD, actual-> valor);
-                            }
-                        }
-
-                        //TODO: humedad email
-
-                    } else if ((i == CANAL_VOLTAJE_DC_1 || i == CANAL_VOLTAJE_DC_2 || i == CANAL_VOLTAJE_DC_3 || i == CANAL_VOLTAJE_DC_4) && minimos[indiceMinimos] > THRESHOLD_ACTIVACION_MEDICION) {
-
-                        //printf("Voltaje: %.2f", actual->valor);
-                        if (actual->valor < minimos[indiceMinimos]) {
-                            for (j = 0; j < configuracion->numeroServidoresSNMP; j++) {
-                                if (i == CANAL_VOLTAJE_DC_1) {
-                                    enviarTrap(ss[j], informacion_nodo.ip, SNMP_GENERICTRAP_ENTERSPECIFIC, TRAP_VOLTAJE_DC_BAJO, OID_VOLTAJE_DC_1, actual->valor);
-                                } else if (i == CANAL_VOLTAJE_DC_2) {
-                                    enviarTrap(ss[j], informacion_nodo.ip, SNMP_GENERICTRAP_ENTERSPECIFIC, TRAP_VOLTAJE_DC_BAJO, OID_VOLTAJE_DC_2, actual->valor);
-                                } else if (i == CANAL_VOLTAJE_DC_3) {
-                                    enviarTrap(ss[j], informacion_nodo.ip, SNMP_GENERICTRAP_ENTERSPECIFIC, TRAP_VOLTAJE_DC_BAJO, OID_VOLTAJE_DC_3, actual->valor);
-                                } else if (i == CANAL_VOLTAJE_DC_4) {
-                                    enviarTrap(ss[j], informacion_nodo.ip, SNMP_GENERICTRAP_ENTERSPECIFIC, TRAP_VOLTAJE_DC_BAJO, OID_VOLTAJE_DC_4, actual->valor);
-                                }
-                            }
-
-                            pthread_mutex_lock(&mutexEmailsAlerta);
-                            switch (canalActual) {
-                                case CANAL_VOLTAJE_DC_1:
-                                    if (!alertaEmailEnviada[17]) {
-                                        memset(asunto, 0, tamanoString);
-                                        memset(mensaje, 0, tamanoString);
-                                        snprintf(asunto, tamanoString, "ALERTA NODO: Voltaje DC 1 bajo.");
-                                        snprintf(mensaje, tamanoString, "El voltaje DC 1 del nodo %s es %.2f V.", informacion_nodo.id, actual->valor);
-                                        enviarMultiplesEmails(configuracion->destinatariosAlertas, configuracion->numeroDestinatariosAlertas, asunto, "monitornodos@telconet.net", mensaje);
-                                        alertaEmailEnviada[17] = 1;
-                                    }
-                                    break;
-                                case CANAL_VOLTAJE_DC_2:
-                                    if (!alertaEmailEnviada[3]) {
-                                        memset(asunto, 0, tamanoString);
-                                        memset(mensaje, 0, tamanoString);
-                                        snprintf(asunto, tamanoString, "ALERTA NODO: Voltaje DC 2 bajo.");
-                                        snprintf(mensaje, tamanoString, "El voltaje DC 2 del nodo %s es %.2f V.", informacion_nodo.id, actual->valor);
-                                        enviarMultiplesEmails(configuracion->destinatariosAlertas, configuracion->numeroDestinatariosAlertas, asunto, "monitornodos@telconet.net", mensaje);
-                                        alertaEmailEnviada[3] = 1;
-                                    }
-                                    break;
-                                case CANAL_VOLTAJE_DC_3:
-                                    if (!alertaEmailEnviada[7]) {
-                                        memset(asunto, 0, tamanoString);
-                                        memset(mensaje, 0, tamanoString);
-                                        snprintf(asunto, tamanoString, "ALERTA NODO: Voltaje DC 3 bajo.");
-                                        snprintf(mensaje, tamanoString, "El voltaje DC 3 del nodo %s es %.2f V.", informacion_nodo.id, actual->valor);
-                                        enviarMultiplesEmails(configuracion->destinatariosAlertas, configuracion->numeroDestinatariosAlertas, asunto, "monitornodos@telconet.net", mensaje);
-                                        alertaEmailEnviada[7] = 1;
-                                    }
-                                    break;
-                                case CANAL_VOLTAJE_DC_4:
-                                    if (!alertaEmailEnviada[10]) {
-                                        memset(asunto, 0, tamanoString);
-                                        memset(mensaje, 0, tamanoString);
-                                        snprintf(asunto, tamanoString, "ALERTA NODO: Voltaje DC 4 bajo.");
-                                        snprintf(mensaje, tamanoString, "El voltaje DC 4 del nodo %s es %.2f V.", informacion_nodo.id, actual->valor);
-                                        enviarMultiplesEmails(configuracion->destinatariosAlertas, configuracion->numeroDestinatariosAlertas, asunto, "monitornodos@telconet.net", mensaje);
-                                        alertaEmailEnviada[10] = 1;
-                                    }
-                                    break;
-                                default:
-                                    break;
-                            }
-                            pthread_mutex_unlock(&mutexEmailsAlerta);
-
-                        }
-                    } else if ((i == CANAL_CORRIENTE_DC_1 || i == CANAL_CORRIENTE_DC_2 || i == CANAL_CORRIENTE_DC_3 || i == CANAL_CORRIENTE_DC_4) && minimos[indiceMinimos] > THRESHOLD_ACTIVACION_MEDICION) {
-                        //Corriente DC   --> Mayor o menor?
-                        if (actual->valor > minimos[indiceMinimos]) {
-                            for (j = 0; j < configuracion->numeroServidoresSNMP; j++) {
-                                if (i == CANAL_CORRIENTE_DC_1) {
-                                    enviarTrap(ss[j], informacion_nodo.ip, SNMP_GENERICTRAP_ENTERSPECIFIC, TRAP_CORRIENTE_DC_ALTA, OID_CORRIENTE_DC_1, actual->valor);
-                                } else if (i == CANAL_CORRIENTE_DC_2) {
-                                    enviarTrap(ss[j], informacion_nodo.ip, SNMP_GENERICTRAP_ENTERSPECIFIC, TRAP_CORRIENTE_DC_ALTA, OID_CORRIENTE_DC_2, actual->valor);
-                                } else if (i == CANAL_CORRIENTE_DC_3) {
-                                    enviarTrap(ss[j], informacion_nodo.ip, SNMP_GENERICTRAP_ENTERSPECIFIC, TRAP_CORRIENTE_DC_ALTA, OID_CORRIENTE_DC_3, actual->valor);
-                                } else if (i == CANAL_CORRIENTE_DC_4) {
-                                    enviarTrap(ss[j], informacion_nodo.ip, SNMP_GENERICTRAP_ENTERSPECIFIC, TRAP_CORRIENTE_DC_ALTA, OID_CORRIENTE_DC_4, actual->valor);
-                                }
-                            }
-                        }
-                    } else if ((i == CANAL_CORRIENTE_AC_3 || i == CANAL_CORRIENTE_AC_4 || i == CANAL_CORRIENTE_AC_2 || i == CANAL_CORRIENTE_AC_1) && minimos[indiceMinimos] > THRESHOLD_ACTIVACION_MEDICION) {
-                        
-                        if (actual->valor > minimos[indiceMinimos]) {
-                            for (j = 0; j < configuracion->numeroServidoresSNMP; j++) {
-                                if (i == CANAL_CORRIENTE_AC_1) {
-                                    enviarTrap(ss[j], informacion_nodo.ip, SNMP_GENERICTRAP_ENTERSPECIFIC, TRAP_CORRIENTE_DC_ALTA, OID_CORRIENTE_DC_1, actual->valor);
-                                } else if (i == CANAL_CORRIENTE_AC_2) {
-                                    enviarTrap(ss[j], informacion_nodo.ip, SNMP_GENERICTRAP_ENTERSPECIFIC, TRAP_CORRIENTE_DC_ALTA, OID_CORRIENTE_DC_2, actual->valor);
-                                } else if (i == CANAL_CORRIENTE_AC_3) {
-                                    enviarTrap(ss[j], informacion_nodo.ip, SNMP_GENERICTRAP_ENTERSPECIFIC, TRAP_CORRIENTE_DC_ALTA, OID_CORRIENTE_DC_3, actual->valor);
-                                } else if (i == CANAL_CORRIENTE_AC_4) {
-                                    enviarTrap(ss[j], informacion_nodo.ip, SNMP_GENERICTRAP_ENTERSPECIFIC, TRAP_CORRIENTE_DC_ALTA, OID_CORRIENTE_DC_4, actual->valor);
-                                }
-                            }
-                        }
-                    } else if ((i == CANAL_VOLTAJE_AC_1 || i == CANAL_VOLTAJE_AC_2) && minimos[indiceMinimos] > THRESHOLD_ACTIVACION_MEDICION) {
-                        //Voltaje AC - alarma si baja mucho el volaje
-                        if (actual->valor < minimos[indiceMinimos]) {
-                            for (j = 0; j < configuracion->numeroServidoresSNMP; j++) {
-                                if (i == CANAL_VOLTAJE_AC_1) {
-                                    enviarTrap(ss[j], informacion_nodo.ip, SNMP_GENERICTRAP_ENTERSPECIFIC, TRAP_VOLTAJE_AC_BAJO, OID_VOLTAJE_AC_1, actual->valor);
-                                } else if (i == CANAL_VOLTAJE_AC_2) {
-                                    enviarTrap(ss[j], informacion_nodo.ip, SNMP_GENERICTRAP_ENTERSPECIFIC, TRAP_VOLTAJE_AC_BAJO, OID_VOLTAJE_AC_2, actual->valor);
-                                }
-                            }
-
-                            pthread_mutex_lock(&mutexEmailsAlerta);
-                            switch (canalActual) {
-                                case CANAL_VOLTAJE_AC_1:
-                                    if (!alertaEmailEnviada[12]) {
-                                        memset(asunto, 0, tamanoString);
-                                        memset(mensaje, 0, tamanoString);
-                                        snprintf(asunto, tamanoString, "ALERTA NODO: Voltaje AC 1 bajo.");
-                                        snprintf(mensaje, tamanoString, "El voltaje AC 1 del nodo %s es %.2f V RMS.", informacion_nodo.id, actual->valor);
-                                        enviarMultiplesEmails(configuracion->destinatariosAlertas, configuracion->numeroDestinatariosAlertas, asunto, "monitornodos@telconet.net", mensaje);
-                                        alertaEmailEnviada[12] = 1;
-                                    }
-                                    break;
-                                case CANAL_VOLTAJE_AC_2:
-                                    if (!alertaEmailEnviada[15]) {
-                                        memset(asunto, 0, tamanoString);
-                                        memset(mensaje, 0, tamanoString);
-                                        snprintf(asunto, tamanoString, "ALERTA NODO: Voltaje AC 2 bajo.");
-                                        snprintf(mensaje, tamanoString, "El voltaje AC 2 del nodo %s es %.2f V RMS.", informacion_nodo.id, actual->valor);
-                                        enviarMultiplesEmails(configuracion->destinatariosAlertas, configuracion->numeroDestinatariosAlertas, asunto, "monitornodos@telconet.net", mensaje);
-                                        alertaEmailEnviada[15] = 1;
-                                    }
-                                    break;
-                                default:
-                                    break;
-                            }
-                            pthread_mutex_unlock(&mutexEmailsAlerta);
-                        }
-                    }
-                }
-            }
-
-            //Seguimos avanzando en la lista
-            if (indiceMinimos < NUMERO_MEDICIONES_ADC) {
-                indiceMinimos++;
-                actual = actual->siguiente;
-            } else actual = NULL;
-
-            //La variable i indica en que numero de medicion estamos. EL codigo mostrado abajo traduce esto al numero de canal
-            //de la medicion en el ADC.
-            i++;
-
-            if (i < 10) {
-                canalActual++;
-            } else {
-                switch (i) {
-                    case 10:
-                        canalActual = 11;
-                        break;
-                    case 11:
-                        canalActual = 12;
-                        break;
-                    case 12:
-                        canalActual = 13;
-                        break;
-                    case 13:
-                        canalActual = 15;
-                        break;
-                    case 14:
-                        canalActual = 16;
-                        break;
-                    case 15:
-                        canalActual = 17;
-                        break;
-                    case 16:
-                        canalActual = 20;
-                        break;
-                    case 17:
-                        canalActual = 21;
-                        break;
-                    default:
-                        //Llegamos al fin de la lista
-                        break;
-                }
-            }
-        }
-        return;
-    } else {
-        printf("med es igual a NULL\n");
-    }
-}*/
 
 /**
  *Rutina que almacena los valores de las mediciones en la base de datos.
@@ -1063,7 +738,7 @@ float voltajeACorrienteAC(uint16_t *voltajes, int numeroMuestras, adcrange rango
 
     //Calculamos la corriente RMS...
     float suma = 0.0000f;
-
+    
     for (i = 0; i < numeroMuestras; i++) {
         valor = ((convertirAVoltaje(voltajes[i], rango) - 2.500f) / 0.020f);
         suma = suma + (valor * valor);
