@@ -296,7 +296,7 @@ int realizarMediciones(volatile struct medicion **med) { //CHECK!!!!!!!!!
                 //DATACENTER
                 //actual->valor = voltajeACorrienteAC(data_canal_1, noMuestras, rango); //Corriente AC solo esta en canales pares.
                 actual->valor = voltajeACorrienteAC(data_canal_1, noMuestras, rango);
-                printf("\nSe ha obtenido la medicion del canal %d: %.2f, Corriente AC: %.2f A RMS\n", i, voltajeADC, actual->valor);
+                //printf("\nSe ha obtenido la medicion del canal %d: %.2f, Corriente AC: %.2f A RMS\n", i, voltajeADC, actual->valor);
                 actual = actual->siguiente;
             } else if (i == CANAL_VOLTAJE_AC_1 || i == CANAL_VOLTAJE_AC_2) {
                 //Voltaje AC
@@ -741,12 +741,13 @@ float voltajeACorrienteAC(uint16_t *voltajes, int numeroMuestras, adcrange rango
     
     for (i = 0; i < numeroMuestras; i++) {
         valor = ((convertirAVoltaje(voltajes[i], rango) - 2.500f) / 0.020f);
+        valor = valor * configuracion->razonCT;
         suma = suma + (valor * valor);
     }
 
     corrienteAC = (suma / ((float) numeroMuestras));
     corrienteAC = sqrt(corrienteAC);
-    corrienteAC = corrienteAC * configuracion->razonCT;
+    //corrienteAC = corrienteAC * configuracion->razonCT;
 
     //Verificar min ??       
     return corrienteAC;
