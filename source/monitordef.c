@@ -267,7 +267,7 @@ void monitorPuerta(void *sd){
             char *fecha = obtenerFecha();
             
             //Mandamos notificacion al servidor
-            insertarEvento(atoi(configuracion->id_nodo), fecha, hora, "puera abierta");
+            insertarEvento(atoi(configuracion->id_nodo), fecha, hora, "puerta abierta");
             
             free(fecha);
             free(hora);
