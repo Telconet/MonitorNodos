@@ -179,12 +179,18 @@ void monitorPuerta(void *sd){
     
     //Medimos el sensor de apertura de puerta   
     sensorPuerta = statusPuerto(puerto_DIO_4);          //puerto puerta es DIO_4
+    
+    char *hora = obtenerHora();
+    char *fecha = obtenerFecha();
        
     //Hacemos una primera medicion, para saber el status real de la puerta
     if(sensorPuerta == PUERTO_OFF){        
         //La puerta esta cerrada
         puertaAbiertaUltMed = CERRADO;
         printf("INFO: La puerta de acceso al nodo esta siendo monitoreada. Puerta cerrada.\n");
+        insertarEvento(atoi(configuracion->id_nodo), fecha, hora, "puerta cerrada");
+        free(fecha);
+        free(hora);
         
         //mandar trap de notificacion
         /*for(j = 0; j < configuracion->numeroServidoresSNMP; j++){
@@ -195,7 +201,9 @@ void monitorPuerta(void *sd){
         //La puerta estaba abierta
         puertaAbiertaUltMed = ABIERTO;
         printf("INFO: La puerta de acceso al nodo esta siendo monitoreada. Puerta abierta.\n");
-        
+        insertarEvento(atoi(configuracion->id_nodo), fecha, hora, "puerta abierta");
+        free(fecha);
+        free(hora);
         //mandar notificacion
         /*for(j = 0; j < configuracion->numeroServidoresSNMP; j++){
             enviarTrap(ss[j], informacion_nodo.ip, SNMP_GENERICTRAP_ENTERSPECIFIC, TRAP_PUERTA_ABIERTA, NULL, 0.0f);
