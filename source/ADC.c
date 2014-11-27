@@ -20,7 +20,7 @@ int inicializarADC(int numeroMuestras, int numeroCanales){
     res = tsadclib1624_init(SBC_TS7200, numeroCanales, tamanoBuffer);
     
     if(res < 0){
-        printf("ERROR: No se pudo inicializar el ADC.\n");
+        printf("ERROR: No se pudo inicializar el ADC (Codigo de error %d).\n", res);
     }
     else{
         printf("INFO: El ADC se ha inicializado correctamente.\n");
