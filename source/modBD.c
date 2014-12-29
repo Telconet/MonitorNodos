@@ -47,7 +47,8 @@ int insertarRegistro(char *nombreTabla, char **valores, int numeroValores, statu
             recvBuff[n - 1] = '\0';
             printf("\nRcv: '%s'", recvBuff);
             if(strcmp(recvBuff, "Inicio")==0){
-                write(sockfd, fromUser, strlen(fromUser));
+               int res =  write(sockfd, fromUser, strlen(fromUser));
+               printf("res: %d\n", res);
             }else if(strcmp(recvBuff, "OK")==0){
                 break;
             }else{
@@ -85,7 +86,6 @@ int insertarEvento(int id_nodo, char *fecha, char *hora, char *evento){
             close(sockfd);
             return -1;
         }
-
         
         memset(fromUser, 0, 300);
         sprintf(fromUser, "%d,%s,%s,%s\n",id_nodo, fecha, hora, evento);
@@ -104,7 +104,6 @@ int insertarEvento(int id_nodo, char *fecha, char *hora, char *evento){
         cont = 0;
         while ((n = read(sockfd, recvBuff, sizeof (recvBuff) - 1)) > 0) {
             recvBuff[n - 1] = '\0';
-            printf("\nRcv: '%s'", recvBuff);
             if(strcmp(recvBuff, "Inicio")==0){
                 write(sockfd, fromUser, strlen(fromUser));
             }else if(strcmp(recvBuff, "OK")==0){

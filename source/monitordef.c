@@ -192,10 +192,6 @@ void monitorPuerta(void *sd){
         free(fecha);
         free(hora);
         
-        //mandar trap de notificacion
-        /*for(j = 0; j < configuracion->numeroServidoresSNMP; j++){
-            enviarTrap(ss[j], informacion_nodo.ip, SNMP_GENERICTRAP_ENTERSPECIFIC, TRAP_PUERTA_CERRADA, NULL, 0.0f);
-        }*/
     }
     else if(sensorPuerta == PUERTO_ON){
         //La puerta estaba abierta
@@ -204,28 +200,8 @@ void monitorPuerta(void *sd){
         insertarEvento(atoi(configuracion->id_nodo), fecha, hora, "puerta abierta");
         free(fecha);
         free(hora);
-        //mandar notificacion
-        /*for(j = 0; j < configuracion->numeroServidoresSNMP; j++){
-            enviarTrap(ss[j], informacion_nodo.ip, SNMP_GENERICTRAP_ENTERSPECIFIC, TRAP_PUERTA_ABIERTA, NULL, 0.0f);
-        }*/
     }
-    
-    //Buffers para strings de memoria
-    /*int tamanoString = 300;
-    char *asunto = malloc(sizeof(char)*tamanoString);
-    
-    if(asunto == NULL){
-        printf("ERROR: Problema al asignar memoria para monitoreo de la puerta.\n");
-        return;
-    }
-    
-    char *mensaje = malloc(sizeof(char)*tamanoString);
-    
-    if(mensaje == NULL){
-        printf("ERROR: Problema al asignar memoria para monitoreo de la puerta.\n");
-        return;
-    }*/
-    
+
     //Empezamos a monitorear la puerta regularmente.
     while(1){
         
@@ -278,6 +254,187 @@ void monitorPuerta(void *sd){
         else if(sensorPuerta == PUERTO_ON && puertaAbiertaUltMed == ABIERTO){
             //
         }
+        usleep(intervaloMonitoreo*1000);        //convertir usecs a msecs
+    }
+}
+
+
+/**
+ *Monitor Aires Acondicionados
+ *Usamos el mismo intervalo de monitoreo de puerta (2 secs default)
+ *
+ *AC Principal DIO_5
+ *AC Backup    DIO_6
+ *
+ *PUERTO_OFF --> AIRE APAGADO
+ *PUERTO_ON --> AIRE ENCENDIDO
+ *
+ *DIO_0 controla AC_Principal
+ *DIO_1 controla AC_backup
+ *(sujeto a cambio)
+ */
+void monitorAiresAcondicionados(void *sd){
+    
+    struct configuracionMonitor *conf = (struct configuracionMonitor *)sd;
+    int intervaloMonitoreo = conf->intervaloMonitoreoPuerta;
+    status_medicion aaCCPrincipalUltMed, aaCCBackupUltMed;
+    int j = 0;
+    float temperatura = 0.0f;
+    status_puerto_DIO sensorAACCPrincipal;
+    status_puerto_DIO sensorAACCBackup;
+    
+    //Medimos el sensor del AC Pinr  
+    sensorAACCPrincipal = statusPuerto(puerto_DIO_5);
+    sensorAACCBackup = statusPuerto(puerto_DIO_6);
+    
+    char *hora = obtenerHora();
+    char *fecha = obtenerFecha();
+    
+    printf("INFO: Verificando status inicial de los aires acondicionados (%d).\n", sensorAACCPrincipal);
+       
+    //Hacemos una primera medicion, para saber el status real de la puerta
+    //Principal
+    if(sensorAACCPrincipal == PUERTO_OFF){        
+        //La puerta esta cerrada
+        aaCCPrincipalUltMed = APAGADO;
+        printf("INFO: Aire acondicionado principal apagado.\n");
+        insertarEvento(atoi(configuracion->id_nodo), fecha, hora, "Aire acondicionado principal apagado");     
+    }
+    else if(sensorAACCPrincipal == PUERTO_ON){
+        aaCCPrincipalUltMed = ENCENDIDO;
+        printf("INFO: Aire acondicionado principal encendido.\n");
+        insertarEvento(atoi(configuracion->id_nodo), fecha, hora, "Aire acondicionado principal encendido");
+    }
+    
+    //Backup
+    if(sensorAACCBackup == PUERTO_OFF){        
+        //La puerta esta cerrada
+        aaCCBackupUltMed = APAGADO;
+        printf("INFO: Aire acondicionado backup apagado.\n");
+        insertarEvento(atoi(configuracion->id_nodo), fecha, hora, "Aire acondicionado apagado");      
+
+    }
+    else if(sensorAACCBackup == PUERTO_ON){
+        aaCCBackupUltMed = ENCENDIDO;
+        printf("INFO: Aire acondicionado backup encendido.\n");
+        insertarEvento(atoi(configuracion->id_nodo), fecha, hora, "Aire acondicionado backup encendido");
+    }
+    
+    free(fecha);
+    free(hora);
+    
+    //Buscamos puntero a medicion de temperatura
+    volatile struct medicion *medicionTemperatura_ptr = listaMediciones;
+
+    //Temperatura es CANAL 1, por lo tanto, vemos el siguiente elemento
+    //en la lista.
+    medicionTemperatura_ptr = medicionTemperatura_ptr->siguiente;
+        
+    //Empezamos a monitorear el A/C
+    while(1){
+        
+        j = 0;
+        
+        //Chequeamos AC principal
+        sensorAACCPrincipal = statusPuerto(puerto_DIO_5);
+        sensorAACCBackup = statusPuerto(puerto_DIO_6);
+       
+        /*
+	Código donde se implementa el control automático de la temperatura de los nodos movistar. Se logra lo siguiente:
+	
+	1) Que cuando la temperatura sea mayor a 30º o si el aire acondicionado principal se apaga, se prenda el aire
+	   acondicionado de back up
+	2) Que cuando esté prendido el aire acondicionado principal y la temperatura sea mayor a 30º, se prenda el
+           aire acondicionado de back up
+        3) Que cuando esté funcionando el aire acondicionado principal y la temperatura sea menor que 30º, se apague
+	   el aire acondicionado de back up
+	*/
+        char temperaturaStr[100];
+
+        
+        //Leer temperatura...
+	pthread_mutex_lock(&mutexTemperatura);
+        temperatura = medicionTemperatura_ptr->valor;
+        pthread_mutex_unlock(&mutexTemperatura);
+        
+	//Empieza código de Control Automático de la temperatura
+	
+	if (sensorAACCPrincipal == PUERTO_OFF || temperatura > 27.0){
+            
+            hora = obtenerHora();
+            fecha = obtenerFecha();
+            
+            //Cuando cambiamos de estado notificamos
+            if(aaCCPrincipalUltMed == ENCENDIDO && sensorAACCPrincipal == PUERTO_OFF){          //solo guardamos si A/C principal esta apagado. Caso contrario prendimos el A/C backup por temperatura.
+                memset(temperaturaStr, 0, 100);
+                snprintf(temperaturaStr, 100, "A/C principal apagado. Temperatura: %.2f C", temperatura);
+                insertarEvento(atoi(configuracion->id_nodo), fecha, hora, temperaturaStr);
+            }
+            
+            
+            if(aaCCBackupUltMed == APAGADO){
+                memset(temperaturaStr, 0, 100);
+                snprintf(temperaturaStr, 100, "A/C backup encendido. Temperatura: %.2f C", temperatura);
+                insertarEvento(atoi(configuracion->id_nodo), fecha, hora, temperaturaStr);
+            }
+            
+	    activarPuerto(puerto_DIO_1);   //Activar el secundario
+            aaCCPrincipalUltMed = APAGADO;
+            aaCCBackupUltMed = ENCENDIDO;
+            free(fecha);
+            free(hora);
+	}
+	else if (sensorAACCPrincipal == PUERTO_ON && temperatura > 27.0){
+            
+            hora = obtenerHora();
+            fecha = obtenerFecha();
+	    activarPuerto(puerto_DIO_1);
+            
+            //Notificamos cambio de estado de los aires acondicionados.
+            if(aaCCPrincipalUltMed == APAGADO){
+                memset(temperaturaStr, 0, 100);
+                snprintf(temperaturaStr, 100, "A/C principal encendido. Temperatura: %.2f C", temperatura);
+                insertarEvento(atoi(configuracion->id_nodo), fecha, hora, temperaturaStr);
+            }
+            
+            if(aaCCBackupUltMed == APAGADO){
+                memset(temperaturaStr, 0, 100);
+                snprintf(temperaturaStr, 100, "A/C backup encendido. Temperatura: %.2f C", temperatura);
+                insertarEvento(atoi(configuracion->id_nodo), fecha, hora, temperaturaStr);
+            }
+            
+            aaCCPrincipalUltMed = ENCENDIDO;
+            aaCCBackupUltMed = ENCENDIDO;
+            free(fecha);
+            free(hora);
+	}
+	else if (sensorAACCPrincipal == PUERTO_ON && temperatura <= 27.0){
+            
+            hora = obtenerHora();
+            fecha = obtenerFecha();
+            desactivarPuerto(puerto_DIO_1);
+            
+            //Notificamos solo si hubo un cambio respecto a la medicion anterior
+            if(aaCCPrincipalUltMed == APAGADO){
+                memset(temperaturaStr, 0, 100);
+                snprintf(temperaturaStr, 100, "A/C principal encendido. Temperatura: %.2f C", temperatura);
+                insertarEvento(atoi(configuracion->id_nodo), fecha, hora, temperaturaStr);
+            }
+            
+            if(aaCCBackupUltMed == ENCENDIDO){
+                memset(temperaturaStr, 0, 100);
+                snprintf(temperaturaStr, 100, "A/C backup apagado. Temperatura: %.2f C", temperatura);
+                insertarEvento(atoi(configuracion->id_nodo), fecha, hora, temperaturaStr);
+            }
+            
+            //Cambiamos ultimo estado
+            aaCCPrincipalUltMed = ENCENDIDO;
+            aaCCBackupUltMed = APAGADO;
+            free(fecha);
+            free(hora);
+	}
+	//Termina código de Control Automático de la temperatura
+        
         usleep(intervaloMonitoreo*1000);        //convertir usecs a msecs
     }
 }

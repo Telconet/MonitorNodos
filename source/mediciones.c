@@ -69,15 +69,11 @@ struct medicion *inicializarListaMediciones(int numeroMediciones) {
     struct medicion *inicio, *actual, *anterior;
 
     inicio = anterior = actual = NULL;
-
-    //printf("Numero de mediciones: %d\n", numeroMediciones);
-
-
     int i = 0;
 
     for (i = 0; i < numeroMediciones; i++) {
         //printf("Iteracion: %d\n", i);
-        if (i < OFFSET_HUMEDAD) {
+        if (i < OFFSET_HUMEDAD) {               //CREAR MEDICION COMBUSTIBLE GENERADOR??
             //temperatura
             actual = crearMedicion(TEMPERATURA, i - 3, 0.0f, NINGUNO);
             //printf("Iteracion: %d\n", i);
@@ -254,7 +250,9 @@ int realizarMediciones(volatile struct medicion **med) { //CHECK!!!!!!!!!
             //y realizamos el calculo correspondiente.
             if (i == CANAL_TEMPERATURA_1) {
                 //temperatura
-                actual->valor = voltajeATemperatura(voltajeADC);
+                pthread_mutex_lock(&mutexTemperatura);
+                actual->valor = voltajeATemperatura(voltajeADC);            //Usamos mutex por que el thread de monitoreos A/C usa este valor
+                pthread_mutex_unlock(&mutexTemperatura);
 
                 //Sensor 1 esta junto a sensor de humedad               CHECK!!
                 if (i == CANAL_TEMPERATURA_1) {

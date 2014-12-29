@@ -8,8 +8,9 @@
  *
  *DDR --> salida = 1, entrada = 0
  *
- *Puerta: DIO0
- *Relays: DIO4 - DIO7
+ *Puerta: DIO4
+ *Relays: DIO0 - DIO3
+ *A/C:      DIO5-DIO7
  */
 
 void configurarPuertosDIO(){
@@ -31,7 +32,7 @@ void configurarPuertosDIO(){
     
     GPIOBDB = (unsigned int *)(inicio + 0xC4); 
     
-    //Configuramos los puertos 0-3  como salida y puertos 4 - 7 como entrada para monitoreo de puerta
+    //Configuramos los puertos 0-3  como salida y puertos 4 - 7 como entrada para monitoreo de puerta y aires acondicionado
     //*PORTDDR = 0xf0;
     *PORTDDR = 0x0f;
     

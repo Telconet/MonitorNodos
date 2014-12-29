@@ -118,14 +118,6 @@ int main(int argc, char *argv[]) {
     //(asigna memoria, inicializa y configura el ADC, etc)
     inicializarSistemaMediciones(NUMERO_MUESTRAS, NUMERO_MAXIMO_CANALES_ADC);
 
-    //Configuramos el servidor SNMP. SESION DEBE ABRIRSE ANTES DE CREAR THREAD DE MONITOREO DE PUERTA.
-    /*ss = abrirMultiplesSesiones(configuracion->ipServidorSNMP, configuracion->numeroServidoresSNMP,
-            configuracion->nombreSesionSNMP, configuracion->comunidadSNMP, SNMP_VERSION_1);
-
-    if (ss == NULL) {
-        printf("ERROR: no se pudo abrir la sesion SNMP.\n");
-    }*/
-
     //Iniciamos los puerto DIO como salida
     configurarPuertosDIO();
     printf("INFO: Puertos entrada/salida configurados.\n");
@@ -163,16 +155,6 @@ int main(int argc, char *argv[]) {
         perror("ALERTA: No se pudo crear el thread de monitoreo de la puerta de acceso. Saliendo...\n");
     }
 
-    //Creamos un thread que va a llevar el control de cuando fue la ultima alerta
-    //int tTiempoEmails;
-
-    /*pthread_mutex_init(&mutexEmailsAlerta, NULL);
-    tTiempoEmails = pthread_create(&tiempoEmailsThread, NULL, (void *)temporizadorEnvioEmails, (void *) configuracion);*/
-
-    if (tPuerta != 0) {
-        perror("ALERTA: No se pudo crear el thread de monitoreo de la puerta de acceso. Saliendo...\n");
-    }
-
     //Ya que no tenemos un RTC, actualizamos la fecha silenciosamente
     if (system("ntpdate -s -h ntp.telconet.net")) {
         printf("ERROR: No se pudo actualizar la fecha.\n");
@@ -181,16 +163,27 @@ int main(int argc, char *argv[]) {
     }
 
     printf("INFO: Direccion IP del monitor de nodo: %s\n", informacion_nodo.ip);
-    //printf("INFO: Se inicializo el servidor SNMP.\n");
-
-    //Trap de inicio frio
-    /*int j;
-    for (j = 0; j < configuracion->numeroServidoresSNMP; j++) {
-        enviarTrap(ss[j], informacion_nodo.ip, SNMP_GENERICTRAP_COLDSTART, 0, NULL, -1.0f);
-    }*/
 
     //Creamos la lista de mediciones 
     listaMediciones = inicializarListaMediciones(NUMERO_MEDICIONES_ADC);
+    
+    //Creamos un thread que va a llevar el control de los aires acondicionados.
+    //La lista de mediciones debe estar ya inicializada.
+    int tAiresAcondicionados;
+
+    int res = pthread_mutex_init(&mutexTemperatura, NULL);
+   
+
+    if(!res){
+	tAiresAcondicionados = pthread_create(&monAiresAcondcionadosThread, NULL, (void *)monitorAiresAcondicionados, (void *) configuracion);
+	if (tAiresAcondicionados != 0) {
+	    perror("ALERTA: No se pudo crear el thread de monitoreo de los aires acondicionados. Saliendo...\n");
+	}
+    }
+    else{
+	perror("ALERTA: No se pudo crear el mutex para el thread de monitoreo de los aires acondicionados. Saliendo...\n");
+	exit(-1);
+    }
 
     char *hora = obtenerHora();
     char *fecha = obtenerFecha();
@@ -204,23 +197,6 @@ int main(int argc, char *argv[]) {
     free(fecha);
     free(hora);
 
-    //Enviamos un email notificando que el monitor se ha (re)iniciado
-    /*char *mensaje = malloc(sizeof (char) *TAMANO_MAX_RESPUESTA);
-    char *asunto = malloc(sizeof (char) *TAMANO_MAX_RESPUESTA);
-
-    if (mensaje == NULL || asunto == NULL) {
-        salir(EXIT_SUCCESS);
-    }
-    memset(mensaje, 0, TAMANO_MAX_RESPUESTA);
-    memset(asunto, 0, TAMANO_MAX_RESPUESTA);
-
-    snprintf(mensaje, TAMANO_MAX_RESPUESTA, "El monitor del nodo %s se ha iniciado el %s a las %s.\n", informacion_nodo.id, obtenerFecha(), obtenerHora());
-    snprintf(asunto, TAMANO_MAX_RESPUESTA, "Inicializacion de monitor nodo %s", informacion_nodo.id);
-
-    enviarMultiplesEmails(configuracion->destinatariosAlertas, configuracion->numeroDestinatariosAlertas,
-            asunto, "monitornodos@telconet.net", mensaje);
-    free(mensaje);
-    free(asunto);*/
 
     //*********PRUEBA ADC
     /*
@@ -249,147 +225,14 @@ int main(int argc, char *argv[]) {
     
     while (1){
 	realizarMediciones(&listaMediciones);
-        //revisarStatusMediciones(listaMediciones);
-	status_puerto_DIO stp = statusPuerto(puerto_DIO_5);//Sensor del aire principal
-	status_puerto_DIO sts = statusPuerto(puerto_DIO_6);//Sensor del aire secundario
+	status_puerto_DIO stp = PUERTO_OFF;//Sensor del aire principal
+	status_puerto_DIO sts = PUERTO_OFF;//Sensor del aire secundario
         almacenarMediciones(&listaMediciones, informacion_nodo.id, configuracion->rutaArchivoColumnasBDADC, NUMERO_MEDICIONES_ADC,stp,sts);
         
 	//configuracion->valoresMinimosPermitidosMediciones, configuracion->numeroValoresMinimosPermitidos);
         sleep(configuracion->intervaloMonitoreo); //damos tiempo que sensores se activen, etc.
 	
-	/*
-	Código donde se implementa el control automático de la temperatura de los nodos movistar. Se logra lo siguiente:
-	
-	1) Que cuando la temperatura sea mayor a 30º o si el aire acondicionado principal se apaga, se prenda el aire
-	   acondicionado de back up
-	2) Que cuando esté prendido el aire acondicionado principal y la temperatura sea mayor a 30º, se prenda el
-           aire acondicionado de back up
-        3) Que cuando esté funcionando el aire acondicionado principal y la temperatura sea menor que 30º, se apague
-	   el aire acondicionado de back up
-	   
-	   
-	*/
-	
-	//Empieza código de Control Automático de la temperatura
-	
-	if (stp == PUERTO_OFF || temperatura > 30){
-	    activarPuerto(puerto_DIO_1);//Activar el secundario
-	}
-	if (stp == PUERTO_ON && temperatura > 30){
-	    activarPuerto(puerto_DIO_1);
-	}
-	if (stp == PUERTO_ON && temperatura <= 30){
-	    desactivarPuerto(puerto_DIO_1);
-	}
-	//Termina código de Control Automático de la temperatura
-
-
-        //Prueba del ADC
-        /*memset(data_canal_1, 0, tamanoBuffers);
-        memset(data_canal_2, 0, tamanoBuffers);
         
-        obtenerMuestra(TARJETA_ADC24, canal, 2000, noMuestras, ADCRANGE_02VS, data_canal_1, data_canal_2);
-        
-        
-        voltaje1 = promedioVoltaje(data_canal_1, noMuestras, ADCRANGE_02VS);
-        voltaje2 = promedioVoltaje(data_canal_2, noMuestras, ADCRANGE_02VS);
-        
-        //printf("\nVoltaje canal %d: %.4f V\n", canal, voltaje1);
-        
-        printf("\nVoltaje canal %d: %.4f V\n", canal, voltaje1);
-        printf("\nVoltaje canal %d: %.4f V\n", canal+1, voltaje2);
-
-        switch(canal){
-            //corriente DC 1 y temp 1
-            case 0:
-                temperaturaHumedad = voltajeATemperatura(voltaje2);
-                printf("\nVoltaje canal %d: %.4f V --> Corriente DC 1: %.2f A\n", canal, voltaje1, voltajeACorrienteDC(voltaje1));
-                printf("\nVoltaje canal %d: %.4f V --> Temperatura 1: %.1f C\n", canal+1, voltaje2, voltajeATemperatura(voltaje2));
-                break;
-            //Corriente AC 3 y voltaje DC 2
-            case 2:
-                printf("\nVoltaje canal %d: %.4f V --> Corriente AC 3: %.1f A RMS\n", canal, voltaje1, voltajeACorrienteAC(data_canal_1, noMuestras, ADCRANGE_02VS));
-                printf("\nVoltaje canal %d: %.4f V --> Voltaje DC 2: %.1f V\n", canal+1, voltaje2, voltajeAVoltajeDC(voltaje2));
-                break;
-            case 4:
-                //Corriente DC 2 y temp 2
-                printf("\nVoltaje canal %d: %.4f V --> Corriente DC 2: %.2f A\n", canal, voltaje1, voltajeACorrienteDC(voltaje1));
-                printf("\nVoltaje canal %d: %.4f V --> Temperatura 2: %.1f C\n\n", canal+1, voltaje2, voltajeATemperatura(voltaje2));
-                break;
-            case 6:
-                //Corriente AC 4 Voltaje DC 3
-                printf("\nVoltaje canal %d: %.4f V --> Corriente AC 4: %.2f A RMS\n", canal, voltaje1, voltajeACorrienteAC(data_canal_1, noMuestras, ADCRANGE_02VS));
-                printf("\nVoltaje canal %d: %.4f V --> Voltaje DC 3: %.2f V\n", canal+1, voltaje2, voltajeAVoltajeDC(voltaje2));
-                break;
-            case 8:
-                //Corriente DC 3 y temp 3
-                printf("\nVoltaje canal %d: %.4f V --> Corriente DC 3: %.2f A\n", canal, voltaje1, voltajeACorrienteDC(voltaje1));
-                printf("\nVoltaje canal %d: %.4f V --> Temperatura: %.2f C\n", canal+1, voltaje2, voltajeATemperatura(voltaje2));
-                break;
-            case 10:
-                //10 nada y voltaje DC 4
-                printf("\nVoltaje canal %d: %.4f V --> Voltaje DC 4: %.2f V\n", canal+1, voltaje2, voltajeAVoltajeDC(voltaje2));
-                break;
-            case 12:
-                //Corriente DC 4 y voltaje AC 1
-                printf("\nVoltaje canal %d: %.4f V --> Corriente DC 4: %.2f A\n", canal, voltaje1, voltajeACorrienteDC(voltaje1));
-                printf("\nVoltaje canal %d: %.4f V --> Voltaje AC 1: %.2f V\n", canal+1, voltaje2, voltajeAVoltajeAC(voltaje2));
-                break;
-            case 14:
-                //14 nada y humedad
-                printf("\nVoltaje canal %d: %.4f V --> Humedad: %.2f %%HR\n", canal+1, voltaje2, voltajeAHumedad(voltaje2,temperaturaHumedad));
-                break;
-            case 16:
-                //Corriente AC 1 y voltaje AC 2
-                printf("\nVoltaje canal %d: %.4f V --> Corriente AC 1: %.2f A RMS\n", canal, voltaje1, voltajeACorrienteAC(data_canal_1, noMuestras, ADCRANGE_02VS));
-                printf("\nVoltaje canal %d: %.4f V --> Voltaje AC 2: %.2f V\n", canal+1, voltaje2, voltajeAVoltajeAC(voltaje2));
-                break;
-            case 20:
-                //Corriente AC 2 y voltaje DC 1
-                printf("\nVoltaje canal %d: %.4f V --> Corriente AC 2: %.2f A RMS\n", canal, voltaje1, voltajeACorrienteAC(data_canal_1, noMuestras, ADCRANGE_02VS));
-                printf("\nVoltaje canal %d: %.4f V --> Voltaje DC 1: %.2f V\n", canal+1, voltaje2, voltajeAVoltajeDC(voltaje2));
-                break;
-            default:
-                break;
-        }
-        
-        
-        //printf("\nVoltaje canal %d: %.4f V\nVoltaje canal %d: %.4f V\n", canal, voltaje1, canal + 1, voltaje2);
-        
-        if(canal == 20){            
-            canal = 20;          
-        }
-        else canal += 2;*/
-
-        //sleep(configuracion->intervaloMonitoreo);  //damos tiempo que sensores se activen, etc.
-        //FIN prueba ADC
-        //desactivarPuerto(puerto_DIO_0);
-
-        //Prueba DIO - salida
-        /*if(statusPuerto(puerto_DIO_0) == PUERTO_ON){
-            desactivarPuerto(puerto_DIO_0);
-            desactivarPuerto(puerto_DIO_1);
-            desactivarPuerto(puerto_DIO_2);
-            desactivarPuerto(puerto_DIO_3);
-            printf("Puerto OFF\n");
-        }
-        else if(statusPuerto(puerto_DIO_0) == PUERTO_OFF){
-            activarPuerto(puerto_DIO_0);
-            activarPuerto(puerto_DIO_1);
-            activarPuerto(puerto_DIO_2);
-            activarPuerto(puerto_DIO_3);
-            printf("Puerto ON\n");
-        }*/
-
-        //Prueba puerta
-        /*if(statusPuerto(puerto_DIO_4) == PUERTO_ON){
-            //desactivarPuerto(puerto_DIO_2);
-            printf("Puerto puerta: ON\n");
-        }
-        else if(statusPuerto(puerto_DIO_4) == PUERTO_OFF){
-            //activarPuerto(puerto_DIO_2);
-            printf("Puerto puerta: OFF\n");
-        }*/
     }
 
     return 0;

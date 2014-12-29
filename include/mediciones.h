@@ -7,6 +7,9 @@
 #include "ADC.h"
 #include "DIO.h"
 
+//mutex de temperatura
+pthread_mutex_t mutexTemperatura;
+
 
 //Definimos los offsets de la lista de mediciones
 #define OFFSET_TEMPERATURA 0

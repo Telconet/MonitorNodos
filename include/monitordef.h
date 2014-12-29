@@ -78,7 +78,7 @@ struct configuracionMonitor{
 //Variables globales
 int sd1, sd2;                                                         //Descriptores de archivo del socket
 pid_t processID;                                                      //Nuestro pid
-pthread_t localComandosThread, monPuertaThread, tiempoEmailsThread;   //thread de comandos, puerta y temporizador
+pthread_t localComandosThread, monPuertaThread, monAiresAcondcionadosThread;   //thread de comandos, puerta y temporizador
 struct nodo informacion_nodo;                                         //Informacion del nodo
 //netsnmp_session **ss;                                                 //Sesiones SNMP
 struct configuracionMonitor* configuracion;                           //configuracion del monitor
@@ -102,6 +102,8 @@ void manejarComandosControlador(void *sd);
 void temporizadorEnvioEmails(void *sd);
 
 void monitorPuerta(void *sd);
+
+void monitorAiresAcondicionados(void *sd);  
 
 void recComandosEnvResp(void *ptr);
 //...
