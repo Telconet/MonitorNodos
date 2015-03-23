@@ -644,7 +644,8 @@ float voltajeATemperatura(float voltaje) {
 
     temperatura1 = voltaje * 100.0f;
 
-    return temperatura1;
+    //return temperatura1;
+    return voltaje;
 
 }
 
@@ -667,7 +668,8 @@ float voltajeAHumedad(float voltaje, float temperatura) {
 
     //printf("%.4f, %.4f\n", voltaje, humedad);
 
-    return humedad;
+    //return humedad;
+    return voltaje;
 }
 
 /**
@@ -683,7 +685,8 @@ float voltajeAVoltajeDC(float voltaje) {
     //Original
     voltajeDC = (105600.0f) * voltaje / (5600.0f);
 
-    return voltajeDC;
+    return voltaje;
+    //return voltajeDC;
 }
 
 /**
@@ -698,7 +701,9 @@ float voltajeAVoltajeAC(float voltaje) {
 
     voltajeAC = pendienteVAC * voltaje + constanteVAC;
 
-    return voltajeAC;
+    //return voltajeAC;
+    
+    return voltaje;
 }
 
 /**
@@ -719,7 +724,8 @@ float voltajeACorrienteDC(float voltaje) {
     //Hasta 100A
     corrienteDC = (voltaje - 2.5000f) / voltioPorAmperio; //0.02000f
 
-    return corrienteDC;
+    //return corrienteDC;
+    return voltaje;
 }
 
 /**
@@ -738,7 +744,8 @@ float voltajeACorrienteAC(uint16_t *voltajes, int numeroMuestras, adcrange rango
     float suma = 0.0000f;
     
     for (i = 0; i < numeroMuestras; i++) {
-        valor = ((convertirAVoltaje(voltajes[i], rango) - 2.500f) / 0.020f);
+        valor = convertirAVoltaje(voltajes[i], rango);
+        //valor = ((convertirAVoltaje(voltajes[i], rango) - 2.500f) / 0.020f);
         valor = valor * configuracion->razonCT;
         suma = suma + (valor * valor);
     }
