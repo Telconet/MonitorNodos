@@ -1,0 +1,7 @@
+Bitacora de cambios
+*******************
+
+[1.0.0]
+
+- Version inicial
+

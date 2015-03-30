@@ -42,6 +42,8 @@
 #define INTERVALO_MON_PUERTA_PRED 500          //milisegundos (medio segundo)
 #define INTERVALO_MON_PRED 5                   //(5 minutos)
 
+//Version del programa
+const volatile static char version[] = "1.0.0";
 
 //Configuracion del monitor
 struct configuracionMonitor{
