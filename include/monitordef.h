@@ -43,7 +43,7 @@
 #define INTERVALO_MON_PRED 5                   //(5 minutos)
 
 //Version del programa
-const volatile static char version[] = "1.0.0";
+const volatile static char version[] = "1.0.1";
 
 //Configuracion del monitor
 struct configuracionMonitor{

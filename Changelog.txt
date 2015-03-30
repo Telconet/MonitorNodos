@@ -1,6 +1,11 @@
 Bitacora de cambios
 *******************
 
+
+[1.0.1]
+
+- Actualizar fecha removido
+
 [1.0.0]
 
 - Version inicial
