@@ -156,11 +156,11 @@ int main(int argc, char *argv[]) {
     }
 
     //Ya que no tenemos un RTC, actualizamos la fecha silenciosamente
-    if (system("ntpdate -s -h ntp.telconet.net")) {
+    /*if (system("ntpdate -s -h ntp.telconet.net")) {
         printf("ERROR: No se pudo actualizar la fecha.\n");
     } else {
         printf("INFO: Se ha actualizado la fecha correctamente.\n");
-    }
+    }*/
 
     printf("INFO: Direccion IP del monitor de nodo: %s\n", informacion_nodo.ip);
 

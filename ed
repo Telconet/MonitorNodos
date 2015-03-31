@@ -1,9 +1,0 @@
-/usr/local/opt/crosstool/arm-linux/gcc-3.3.4-glibc-2.3.2/arm-linux/bin/gcc -c -std=c99 -mcpu=arm9 -Wall -Wno-trigraphs -B /usr/local/opt/crosstool/arm-linux/gcc-3.3.4-glibc-2.3.2/arm-linux/bin  -I `pwd`/include source/ADC.c 
-/usr/local/opt/crosstool/arm-linux/gcc-3.3.4-glibc-2.3.2/arm-linux/bin/gcc -c -std=c99 -mcpu=arm9 -Wall -Wno-trigraphs -I `pwd`/include source/monitorNodo.c
-/usr/local/opt/crosstool/arm-linux/gcc-3.3.4-glibc-2.3.2/arm-linux/bin/gcc -g -c -std=c99 -mcpu=arm9 -Wall -Wno-trigraphs -I `pwd`/include source/utilidades.c
-/usr/local/opt/crosstool/arm-linux/gcc-3.3.4-glibc-2.3.2/arm-linux/bin/gcc -g -c -std=c99 -mcpu=arm9 -Wall -Wno-trigraphs -I `pwd`/include source/IPC.c
-/usr/local/opt/crosstool/arm-linux/gcc-3.3.4-glibc-2.3.2/arm-linux/bin/gcc -g -c -std=c99 -mcpu=arm9 -Wall -Wno-trigraphs -I `pwd`/include source/monitordef.c
-/usr/local/opt/crosstool/arm-linux/gcc-3.3.4-glibc-2.3.2/arm-linux/bin/gcc -g -c -std=c99 -mcpu=arm9 -Wall -Wno-trigraphs -I `pwd`/include source/snmpdef.c
-/usr/local/opt/crosstool/arm-linux/gcc-3.3.4-glibc-2.3.2/arm-linux/bin/gcc -g -c  -std=c99 -mcpu=arm9 -Wall -Wno-trigraphs -I `pwd`/include source/modBD.c
-/usr/local/opt/crosstool/arm-linux/gcc-3.3.4-glibc-2.3.2/arm-linux/bin/gcc -g -c -std=c99 -mcpu=arm9 -Wall -Wno-trigraphs -I `pwd`/include source/email.c
-/usr/local/opt/crosstool/arm-linux/gcc-3.3.4-glibc-2.3.2/arm-linux/bin/gcc -g -c -std=c99 -mcpu=arm9 -Wall -Wno-trigraphs -I `pwd`/include source/mediciones.c
