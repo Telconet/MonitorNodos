@@ -2,12 +2,12 @@
 #define DIO_H
 
 #include "definiciones.h"
-#include<unistd.h>
+/*#include<unistd.h>
 #include<sys/types.h>
 #include<sys/mman.h>
 #include<stdio.h>
 #include<fcntl.h>
-#include<string.h>
+#include<string.h>*/
 
 void configurarPuertosDIO();
 

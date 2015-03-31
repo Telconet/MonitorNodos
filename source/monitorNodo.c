@@ -6,62 +6,7 @@
 //estados estado = UNO;
 int activarPuerto(puerto_DIO puerto_DIO_0);
 
-/*Socket-client.c
- * tomado de: http://www.codeproject.com/Articles/586000/Networking-and-Socket-programming-tutorial-in-C
- */
-int main2(void) {
-    int sockfd = 0, n = 0;
-    char recvBuff[1024];
-    char fromUser[1024];
-    struct sockaddr_in serv_addr;
-    int conn;
 
-    //printf("\nProbando SOCKETS");
-    memset(recvBuff, '0', sizeof (recvBuff));
-    if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-        printf("\n Error : Could not create socket \n");
-        return 1;
-    }
-
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_port = htons(5000);
-    serv_addr.sin_addr.s_addr = inet_addr("172.40.0.10");
-
-    //printf("\nConecctandose...");
-    conn = connect(sockfd, (struct sockaddr *) &serv_addr, sizeof (serv_addr));
-    //printf("\nRespuesta: %d", conn);
-    if (conn < 0) {
-        printf("\n Error : Connect Failed \n");
-        return 1;
-    }
-
-    //printf("\nLeyendo datos");
-    while ((n = read(sockfd, recvBuff, sizeof (recvBuff) - 1)) > 0) {
-        recvBuff[n] = '\0';
-        printf("\nServer: %s", recvBuff);
-        if (strcmp(recvBuff, "Bye.") == 0) {
-            break;
-        }
-        printf("\nRespuesta: ");
-        bzero(fromUser, 1024);
-        fgets(fromUser, 1023, stdin);
-        //scanf("%100[^\n]%c", fromUser, &enter);
-        //printf("\n'%s' -> %d",fromUser,strlen(fromUser));
-        n = write(sockfd, fromUser, strlen(fromUser));
-        /*
-                if (fputs(recvBuff, stdout) == EOF) {
-                    printf("\n Error : Fputs error");
-                }
-                printf("\n");
-         */
-    }
-
-    if (n < 0) {
-        printf("\n FIN \n");
-    }
-
-    return 0;
-}
 
 /**
  *Rutina para hacer del proceso un daemon. TODO
@@ -182,6 +127,17 @@ int main(int argc, char *argv[]) {
     }
     else{
 	perror("ALERTA: No se pudo crear el mutex para el thread de monitoreo de los aires acondicionados. Saliendo...\n");
+	exit(-1);
+    }
+    
+    //Creamos el hilo para solicitudes MODBUS
+     //Creamos un thread para controlar acceso a las puertas.
+    int tModbus;
+
+    tModbus = pthread_create(&monPuertaThread, NULL, (void *)monitorModbus, (void *) configuracion);
+
+    if (tPuerta != 0) {
+        perror("ERROR: No se pudo crear el thread de monitoreo modbus. Saliendo...\n");
 	exit(-1);
     }
 

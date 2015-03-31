@@ -9,6 +9,8 @@
 #include "ADC.h"
 #include "DIO.h"
 #include "IPC.h"
+#include "modbustn.h"
+
 
 
 //Definiciones
@@ -78,7 +80,7 @@ struct configuracionMonitor{
 //Variables globales
 int sd1, sd2;                                                         //Descriptores de archivo del socket
 pid_t processID;                                                      //Nuestro pid
-pthread_t localComandosThread, monPuertaThread, monAiresAcondcionadosThread;   //thread de comandos, puerta y temporizador
+pthread_t localComandosThread, monPuertaThread, monAiresAcondcionadosThread, hiloModbus;   //thread de comandos, puerta y temporizador
 struct nodo informacion_nodo;                                         //Informacion del nodo
 //netsnmp_session **ss;                                                 //Sesiones SNMP
 struct configuracionMonitor* configuracion;                           //configuracion del monitor
@@ -103,7 +105,9 @@ void temporizadorEnvioEmails(void *sd);
 
 void monitorPuerta(void *sd);
 
-void monitorAiresAcondicionados(void *sd);  
+void monitorAiresAcondicionados(void *sd);
+
+void monitorModbus(void *sd);
 
 void recComandosEnvResp(void *ptr);
 //...

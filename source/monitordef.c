@@ -439,6 +439,22 @@ void monitorAiresAcondicionados(void *sd){
     }
 }
 
+
+/**
+ *Funcion que manejara las solicitudes MODBUS
+ */
+void monitorModbus(void *sd){
+    
+    struct configuracionMonitor *conf = (struct configuracionMonitor *)sd;
+    //int intervaloMonitoreo = conf->intervaloMonitoreoPuerta;
+    //int j = 0;
+    
+    
+    //TODO: obtener configuracion MODBUS del archivo de configuracion
+}
+        
+        
+
 /**
  *Funcion que manejara el envio y recepcion de comandos
  *mediante Unix sockets. Correrá en un thread individual.
