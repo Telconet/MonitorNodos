@@ -12,6 +12,9 @@
 #include "modbustn.h"
 
 
+#define USAR_MODBUS     1
+#define USAR_TCP        2
+
 
 //Definiciones
 #define MAX_BUFFER_SIZE 20
@@ -19,25 +22,32 @@
 
 
 //Definiciones de opciones de configuracion
-#define ID_NODO "id-nodo"
-#define INTERVALO_MON "intervalo-monitoreo"
-#define INTERVALO_MON_PUERTA "intervalo-monitoreo-puerta"
-#define ARCHIVO_COL_BD_ADC "archivo-columnas-BD-ADC"
-#define ARCHIVO_COL_BD_DIO "archivo-columnas-BD-DIO"
-#define IP_SERVIDOR_SNMP "ip-servidor-snmp"
-#define COMUNIDAD_SNMP "comunidad-snmp"
-#define SESION_SNMP "nombre-sesion-snmp"
-#define BASE_DE_DATOS "nombre-base-de-datos"
-#define IP_SERVIDOR_BASE_DE_DATOS "ip-base-de-datos"
-#define USUARIO_BASE_DE_DATOS "usuario-base-de-datos"
-#define CLAVE_BASE_DE_DATOS "clave-base-de-datos"
-#define PUERTO_BASE_DE_DATOS "puerto-base-de-datos"
-#define VALORES_MINIMOS_PERMITIDOS "valores-min-permitidos"
-#define DESTINATARIOS_ALERTAS "destinatarios-alertas"
-#define SERVIDOR_ACTUALIZACIONES "ip-servidor-actualizaciones"
-#define HABILITAR_ALERTAS "habilitar-alertas"
-#define PERIODO_ENVIO_EMAILS "periodo-envio-emails"
-#define RAZON_CT "razon-transformador-ct"
+#define ID_NODO                     "id-nodo"
+#define INTERVALO_MON               "intervalo-monitoreo"
+#define INTERVALO_MON_PUERTA        "intervalo-monitoreo-puerta"
+#define ARCHIVO_COL_BD_ADC          "archivo-columnas-BD-ADC"
+#define ARCHIVO_COL_BD_DIO          "archivo-columnas-BD-DIO"
+#define IP_SERVIDOR_SNMP            "ip-servidor-snmp"
+#define COMUNIDAD_SNMP              "comunidad-snmp"
+#define SESION_SNMP                 "nombre-sesion-snmp"
+#define BASE_DE_DATOS               "nombre-base-de-datos"
+#define IP_SERVIDOR_BASE_DE_DATOS   "ip-base-de-datos"
+#define USUARIO_BASE_DE_DATOS       "usuario-base-de-datos"
+#define CLAVE_BASE_DE_DATOS         "clave-base-de-datos"
+#define PUERTO_BASE_DE_DATOS        "puerto-base-de-datos"
+#define VALORES_MINIMOS_PERMITIDOS  "valores-min-permitidos"
+#define DESTINATARIOS_ALERTAS       "destinatarios-alertas"
+#define SERVIDOR_ACTUALIZACIONES    "ip-servidor-actualizaciones"
+#define HABILITAR_ALERTAS           "habilitar-alertas"
+#define PERIODO_ENVIO_EMAILS        "periodo-envio-emails"
+#define RAZON_CT                    "razon-transformador-ct"
+#define MODBUS_BAUDRATE             "modbus-baudrate"
+#define MODBUS_TTY                  "modbus-tty"
+#define MODBUS_DATABITS             "modbus-databits"
+#define MODBUS_STOPBITS             "modbus-stopbits"
+#define MODBUS_PARITY               "modbus-paridad"
+#define MODBUS_SLAVE_ID             "modbus-id-esclavo"
+#define MODBUS_MODO_PUERTO          "modbus-modo-puerto" 
 
 
 //Valore predeterminados de monitoreo
@@ -57,6 +67,13 @@ struct configuracionMonitor{
     int numeroMaximoControladores;
     int numeroCanalesActivos;
     int periodoEnvioEmails;
+    int modbusBaudrate;
+    int modbusDatabits;
+    int modbusStopbits;
+    char modbusParidad;
+    int modbusSlaveId;
+    int modbusModoPuerto;
+    char *modbusTTY;
     float razonCT;
     char *id_nodo;
     char *interfazRed;
@@ -85,6 +102,9 @@ struct nodo informacion_nodo;                                         //Informac
 //netsnmp_session **ss;                                                 //Sesiones SNMP
 struct configuracionMonitor* configuracion;                           //configuracion del monitor
 volatile struct medicion *listaMediciones;                            //La lista de las mediciones mas actuales
+int modoComunicacion;
+
+
 
 
 //Variables para envio de e-mails de alertas

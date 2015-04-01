@@ -8,7 +8,7 @@ INCLUDEOS=/usr/local/opt/crosstool/arm-linux/gcc-3.3.4-glibc-2.3.2/arm-linux/inc
 LIBRERIAMODBUS=/usr/local/opt/crosstool/arm-linux/gcc-3.3.4-glibc-2.3.2/arm-linux/lib/libmodbus.a
 
 monnod: ADC.o monitorNodo.o utilidades.o IPC.o monitordef.o modBD.o email.o mediciones.o DIO.o modbustn.o
-	$(ARMCC) -Wall -fPIC -Wno-trigraphs -mcpu=arm9 -o bin/monnod -g lib/tsadclib1624.o obj/ADC.o obj/monitorNodo.o obj/utilidades.o obj/IPC.o obj/monitordef.o  obj/modBD.o obj/email.o obj/mediciones.o obj/DIO.o -static -lpthread -lm $(LIBRERIAMODBUS)
+	$(ARMCC) -Wall -fPIC -Wno-trigraphs -mcpu=arm9 -o bin/monnod -g lib/tsadclib1624.o obj/ADC.o obj/monitorNodo.o obj/utilidades.o obj/IPC.o obj/monitordef.o  obj/modBD.o obj/email.o obj/mediciones.o obj/DIO.o  obj/modbustn.o -static -lpthread -lm $(LIBRERIAMODBUS)
 
 ADC.o: source/ADC.c include/ADC.h
 	$(ARMCC) -c -fPIC -mcpu=arm9 -Wall -Wno-trigraphs -I $(DIR_ACTUAL)/include -I $(INCLUDEOS) source/ADC.c -o obj/ADC.o

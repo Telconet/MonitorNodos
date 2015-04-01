@@ -3,12 +3,6 @@
 
 #include "definiciones.h"
 #include <modbus.h>
-/*#include<unistd.h>
-#include<sys/types.h>
-#include<sys/mman.h>
-#include<stdio.h>
-#include<fcntl.h>
-#include<string.h>*/
 
 
 #define MODO_RS_232             1
@@ -18,19 +12,27 @@
 #define COM2                    "/dev/ttyAM1"
 
 
+//Contiene los registros, coils, inputs, etc
+modbus_mapping_t *mapeo_modbus;
+
+
 int modbus_test();
 
 
 /**
- *Crea el contexto MODBUS RTU
+ *Crea la conexion MODBUS RTU
  */
-int conectar_modbus_serial(int modo_puerto, int baudrate, char *tty, int modo_puerto_serial, int data_bits, char paridad, int stop_bits, modbus_t *contexto);
-
+int conectar_modbus_serial(int modo_puerto, int baudrate, char *tty, int data_bits, char paridad, int stop_bits, modbus_t *contexto, int id_esclavo);
 
 /**
  *Liberar el contexto modbus (libera los recursos usados)
  */
 void liberarContextoModbus(modbus_t *contexto);
+
+/**
+ *Cierra la conectividad serial de modbus
+ */
+void cerrar_modbus_serial(modbus_t *contexto);
 
 
 
@@ -39,6 +41,8 @@ void liberarContextoModbus(modbus_t *contexto);
  *Esta funcion es usada por conectar_modbus_serial
  */
 static int configurar_puerto_serial(int modo_puerto, int baudrate, char paridad, int stop_bits, int data_bits);
+
+
 
 
 #endif

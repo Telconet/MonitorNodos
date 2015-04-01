@@ -47,6 +47,18 @@ int main(int argc, char *argv[]) {
         printf("ERROR: No se ha proporcionado la ruta del archivo de configuracion. Este programa se cerrara.\n");
         salir(EXIT_FAILURE);
     }
+    
+    //Hay un tercer argumento (modbus)
+    if(argc == 3){
+	if(!strcmp(argv[2], "modbus")){
+	    printf("INFO: Directiva modbus especificada. Se usara comunicacion modbus.\n");
+	    modoComunicacion = USAR_MODBUS;
+	}
+	else{
+	    printf("ERROR: Tercer argumento no reconocido. Se usara comuncacion TCP\n");
+	    modoComunicacion = USAR_TCP;
+	}
+    }
 
     char * rutaArchivoConfiguracion = argv[1];
     configuracion = leerArchivoConfiguracion(rutaArchivoConfiguracion);
@@ -130,9 +142,17 @@ int main(int argc, char *argv[]) {
 	exit(-1);
     }
     
-    //Creamos el hilo para solicitudes MODBUS
-     //Creamos un thread para controlar acceso a las puertas.
+    //Inicializamos el sistema MODBUS
+    modbus_t *contexto_modbus;
+    
+    //Al retornar, contexto_modbus apunta a la estructura creada
+    conectar_modbus_serial(configuracion->modbusModoPuerto, configuracion->modbusBaudrate, configuracion->modbusTTY, configuracion->modbusDatabits,
+			    configuracion->modbusParidad, configuracion->modbusStopbits, contexto_modbus, configuracion->modbusSlaveId);
+    
+    
+    //Creamos un thread para controlar acceso a las puertas.
     int tModbus;
+    
 
     tModbus = pthread_create(&monPuertaThread, NULL, (void *)monitorModbus, (void *) configuracion);
 
@@ -183,8 +203,11 @@ int main(int argc, char *argv[]) {
 	realizarMediciones(&listaMediciones);
 	status_puerto_DIO stp = PUERTO_OFF;//Sensor del aire principal
 	status_puerto_DIO sts = PUERTO_OFF;//Sensor del aire secundario
-        almacenarMediciones(&listaMediciones, informacion_nodo.id, configuracion->rutaArchivoColumnasBDADC, NUMERO_MEDICIONES_ADC,stp,sts);
-        
+	
+	if(modoComunicacion == USAR_TCP){
+	    almacenarMediciones(&listaMediciones, informacion_nodo.id, configuracion->rutaArchivoColumnasBDADC, NUMERO_MEDICIONES_ADC, stp, sts);
+	}
+	
 	//configuracion->valoresMinimosPermitidosMediciones, configuracion->numeroValoresMinimosPermitidos);
         sleep(configuracion->intervaloMonitoreo); //damos tiempo que sensores se activen, etc.
 	

@@ -1362,6 +1362,75 @@ struct configuracionMonitor* leerArchivoConfiguracion(char *rutaArchivo){
                     }
                     else return NULL;
                 }
+                else if(strstr(linea, MODBUS_BAUDRATE)!= NULL){      
+                    valores = obtenerValorConfig(linea, &num);
+                    if(valores != NULL){
+                        configuracion->modbusBaudrate = atoi(valores[0]);
+                        printf("INFO: Baud-rate de modbus: %d:1.\n", configuracion->modbusBaudrate);
+                    }
+                    else return NULL;
+                }
+                else if(strstr(linea, MODBUS_DATABITS)!= NULL){      
+                    valores = obtenerValorConfig(linea, &num);
+                    if(valores != NULL){
+                        configuracion->modbusDatabits = atoi(valores[0]);
+                        printf("INFO: Bits de datos modbus: %d.\n", configuracion->modbusDatabits);
+                    }
+                    else return NULL;
+                }
+                else if(strstr(linea, MODBUS_STOPBITS)!= NULL){      
+                    valores = obtenerValorConfig(linea, &num);
+                    if(valores != NULL){
+                        configuracion->modbusStopbits = atoi(valores[0]);
+                        printf("INFO: Bits de stop modbus: %d.\n", configuracion->modbusStopbits);
+                    }
+                    else return NULL;
+                }
+                else if(strstr(linea, MODBUS_TTY) != NULL){ 
+                    valores = obtenerValorConfig(linea, &num);
+                    if(valores != NULL){
+                        configuracion->modbusTTY = valores[0];
+                        printf("INFO: TTY de modbus: %s\n", configuracion->modbusTTY);
+                    }
+                    else return NULL;
+                }
+                else if(strstr(linea, MODBUS_SLAVE_ID)!= NULL){      
+                    valores = obtenerValorConfig(linea, &num);
+                    if(valores != NULL){
+                        configuracion->modbusSlaveId = atoi(valores[0]);
+                        printf("INFO: ID dispositivo esclavo modbus: %d.\n", configuracion->modbusSlaveId);
+                    }
+                    else return NULL;
+                }
+                else if(strstr(linea, MODBUS_PARITY) != NULL){ 
+                    valores = obtenerValorConfig(linea, &num);
+                    if(valores != NULL){
+                        configuracion->modbusParidad = valores[0][0];                   //Valor[0] = string "N\0", por lo tanto tomamos el caracter que necesitamos.
+                        printf("INFO: TTY de modbus: %c\n", configuracion->modbusParidad);
+                    }
+                    else return NULL;
+                }
+                else if(strstr(linea, MODBUS_MODO_PUERTO)!= NULL){
+                    if(modoComunicacion == USAR_MODBUS)
+                        valores = obtenerValorConfig(linea, &num);          //Modo 1: RS232, Modo 2: RS485 HD, Modo 3: RS485 FD
+                        if(valores != NULL){
+                            configuracion->modbusModoPuerto = atoi(valores[0]);
+                            if(configuracion->modbusModoPuerto == MODO_RS_232){
+                                printf("INFO: comunicacion modbus mediante RS-232\n");
+                            }
+                            else if(configuracion->modbusModoPuerto == MODO_RS_485_HD){
+                                printf("INFO: comunicacion modbus mediante RS-485 Half-Duplex\n");
+                            }
+                            else if(configuracion->modbusModoPuerto == MODO_RS_485_FD){
+                                printf("INFO: comunicacion modbus mediante RS-485 Full-Duplex\n");
+                            }
+                            else{
+                                 printf("ERROR: modo modbus invalio. Saliendo.\n");
+                                 exit(-1);
+                            }
+                    }
+                    else return NULL;
+                }
             }
         }
         fclose(archivo);
