@@ -26,11 +26,12 @@
 #include <pthread.h>
 #include <unistd.h>
 #include<unistd.h>
-#include<sys/types.h>
-#include<sys/mman.h>
-#include<stdio.h>
-#include<fcntl.h>
-#include<string.h>
+#include <sys/types.h>
+#include <sys/mman.h>
+#include <stdio.h>
+#include <fcntl.h>
+#include <string.h>
+#include "modbus.h"
 //#include <net-snmp/net-snmp-config.h>
 //#include <net-snmp/net-snmp-includes.h>
 //#include <net-snmp/agent/net-snmp-agent-includes.h>

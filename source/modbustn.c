@@ -1,24 +1,6 @@
 #include "modbustn.h"
 
 
-
-int modbus_test(){
-    
-    //primero configu
-    
-    modbus_t *ctx;
-    
-    ctx = modbus_new_rtu("/dev/ttyUSB0", 19200, 'N', 8, 1);
-    
-    if (ctx == NULL) {
-        fprintf(stderr, "No se pudo crear el contexto modbus.\n");
-        return -1;
-    }
-    
-    return 0;
-}
-
-
 static int configurar_puerto_serial(int modo_puerto, int baudrate, char paridad, int stop_bits, int data_bits){
     
     //En reset, el puerto COM2 se configura como RS-232 por defecto.
@@ -94,14 +76,9 @@ static int configurar_puerto_serial(int modo_puerto, int baudrate, char paridad,
     
 }
 
-void liberarContextoModbus(modbus_t *contexto){
-    
-    if(contexto != NULL){
-        modbus_free(contexto);
-    }
-}
 
 void cerrar_modbus_serial(modbus_t *contexto){
+    modbus_mapping_free(mapeo_modbus);      //variable global
     modbus_close(contexto);
 }
 
@@ -162,18 +139,285 @@ int conectar_modbus_serial(int modo_puerto, int baudrate, char *tty, int data_bi
     
     if(mapeo_modbus == NULL){
         printf("ERROR: No se pudo crear el mapeo modbus de los registros\n");
-        liberarContextoModbus(contexto);
+        modbus_free(contexto);
         return -1;
     }
     
     //Iniciamos la conexion serial
     if(modbus_connect(contexto) == -1){
         printf("ERROR: No se pudo iniciar la comunicacion modbus serial\n");
-        liberarContextoModbus(contexto);
+        modbus_free(contexto);
         return -1;
     }
     
     return 0;
+}
+
+
+
+
+/**
+ *Configura los registros del puerto COM2 de la tarjeta TS7200 para RS-232, RS-485 HD o RS-485 FD.
+ *Esta funcion es usada por conectar_modbus_serial
+ */
+static int configurar_puerto_serial(int modo_puerto, int baudrate, char paridad, int stop_bits, int data_bits);
+
+
+/**
+ *Las funciones mostradas abajo son SOLO para manipular los valores almacenados
+ *en la estructura modbus_mapping_t, no para comunicacion con otros dispositivos.
+ *Para esto, se usan las funciones de la libreria modbus
+ */
+
+int asignarBit(modbus_mapping_t *mapeo, uint8_t valor, int direccion){
     
+    if(mapeo->tab_bits == NULL){
+        return -1;                  //No existen los registros a asignar
+    }
+    
+    if(direccion > (mapeo->nb_bits - 1)){
+        return -1;                  //estamos tratando de asignar un registro que no existe
+    }
+    
+    if(valor != ON || valor != OFF){
+        return -1;                  //Solo permitimos valores ON u OFF
+    }
+    
+    mapeo->tab_bits[direccion] = valor;
+    
+    return 0;
+}
+
+
+int asignarRegistro(modbus_mapping_t *mapeo, uint16_t valor, int direccion){
+    
+    if(mapeo->tab_registers == NULL){
+        return -1;                  //No existen los registros a asignar
+    }
+    
+    if(direccion > (mapeo->nb_registers - 1)){
+        return -1;                  //estamos tratando de asignar un registro que no existe
+    }
+    
+    mapeo->tab_registers[direccion] = valor;
+    
+    return 0;
+}
+
+
+int asignarInputBit(modbus_mapping_t *mapeo, uint8_t valor, int direccion){
+    
+    if(mapeo->tab_input_bits == NULL){
+        return -1;                  //No existen los registros a asignar
+    }
+    
+    if(direccion > (mapeo->nb_input_bits - 1)){
+        return -1;                  //estamos tratando de asignar un registro que no existe
+    }
+    
+    if(valor != ON || valor != OFF){
+        return -1;                  //Solo permitimos valores ON u OFF
+    }
+    
+    mapeo->tab_input_bits[direccion] = valor;
+    
+    return 0;
+}
+
+
+
+int asignarRegistroInput(modbus_mapping_t *mapeo, uint16_t valor, int direccion){
+    
+    if(mapeo->tab_input_registers == NULL){
+        return -1;                  //No existen los registros a asignar
+    }
+    
+    if(direccion > (mapeo->nb_input_registers - 1)){
+        return -1;                  //estamos tratando de asignar un registro que no existe
+    }
+    
+    mapeo->tab_input_registers[direccion] = valor;
+    
+    return 0;
+}
+
+
+
+uint8_t leerBit(modbus_mapping_t *mapeo,  int direccion){
+    
+    if(mapeo->tab_bits == NULL){
+        return -1;                  //No existen los registros a asignar
+    }
+    
+    if(direccion > (mapeo->nb_bits - 1)){
+        return -1;                  //estamos tratando de asignar un registro que no existe
+    }
+    
+    return mapeo->tab_bits[direccion];
+    
+    
+}
+
+
+
+uint16_t leerRegistro(modbus_mapping_t *mapeo, int direccion){
+    
+    if(mapeo->tab_registers == NULL){
+        return -1;                  //No existen los registros a asignar
+    }
+    
+    if(direccion > (mapeo->nb_registers - 1)){
+        return -1;                  //estamos tratando de asignar un registro que no existe
+    }
+    
+    return mapeo->tab_registers[direccion];
+    
+}
+
+
+uint8_t leerInputBit(modbus_mapping_t *mapeo, int direccion){
+    
+    if(mapeo->tab_input_bits == NULL){
+        return -1;                  //No existen los registros a asignar
+    }
+    
+    if(direccion > (mapeo->nb_input_bits - 1)){
+        return -1;                  //estamos tratando de asignar un registro que no existe
+    }
+    
+    return mapeo->tab_input_bits[direccion];
+    
+}
+
+
+
+uint16_t leerRegistroInput(modbus_mapping_t *mapeo, int direccion){
+    
+    if(mapeo->tab_input_registers == NULL){
+        return -1;                  //No existen los registros a asignar
+    }
+    
+    if(direccion > (mapeo->nb_input_registers - 1)){
+        return -1;                  //estamos tratando de asignar un registro que no existe
+    }
+    
+    return mapeo->tab_input_registers[direccion];
+
+}
+
+
+int asignarRegistroFloat(modbus_mapping_t *mapeo, float valor, int direccion, int swap){
+    
+    if(mapeo->tab_registers == NULL){
+        return -1;                  //No existen los registros a asignar
+    }
+    
+    if(direccion + 1 > mapeo->nb_registers - 1){
+        return -1;                  //No hay registros suficientes para almacenar el valor de 32 bits
+    }
+    
+    uint16_t upper_byte = (int)valor & 0xffff0000;
+    uint16_t lower_byte = (int)valor & 0x0000ffff;
+    
+    //bytes mas significtivos primero
+    if(!swap){
+        mapeo->tab_registers[direccion] = upper_byte;
+        mapeo->tab_registers[direccion+1] = lower_byte;
+        
+    }
+    else{
+        mapeo->tab_registers[direccion] = lower_byte;
+        mapeo->tab_registers[direccion+1] = upper_byte;
+    }
+    
+    return 0;
+}
+
+
+float leerRegistroFloat(modbus_mapping_t *mapeo, int direccion, int swap){
+    
+    if(mapeo->tab_registers == NULL){
+        return -1;                  //No existen los registros a asignar
+    }
+    
+    if(direccion + 1 > mapeo->nb_registers - 1){
+        return -1;                  //No hay registros suficientes para almacenar el valor de 32 bits
+    }
+    
+    uint16_t upper_byte, lower_byte;
+    
+    //bytes mas significtivos primero
+    if(!swap){
+        upper_byte = mapeo->tab_registers[direccion];
+        lower_byte = mapeo->tab_registers[direccion+1];
+        
+    }
+    else{
+        upper_byte = mapeo->tab_registers[direccion+1];
+        lower_byte = mapeo->tab_registers[direccion];
+    }
+    
+    int valor = (((int)upper_byte) << 16) + (int)lower_byte;                            //tenemos los bits
+    
+    return (float)valor;
+}
+
+
+
+
+int asignarRegistroInputFloat(modbus_mapping_t *mapeo, float valor, int direccion, int swap){
+    
+    if(mapeo->tab_input_registers == NULL){
+        return -1;                  //No existen los registros a asignar
+    }
+    
+    if(direccion + 1 > mapeo->nb_input_registers - 1){
+        return -1;                  //No hay registros suficientes para almacenar el valor de 32 bits
+    }
+    
+    uint16_t upper_byte = (int)valor & 0xffff0000;
+    uint16_t lower_byte = (int)valor & 0x0000ffff;
+    
+    //bytes mas significtivos primero
+    if(!swap){
+        mapeo->tab_input_registers[direccion] = upper_byte;
+        mapeo->tab_input_registers[direccion+1] = lower_byte;
+        
+    }
+    else{
+        mapeo->tab_input_registers[direccion] = lower_byte;
+        mapeo->tab_input_registers[direccion+1] = upper_byte;
+    }
+    
+    return 0;
+}
+
+
+float leerRegistroInputFloat(modbus_mapping_t *mapeo, int direccion, int swap){
+    
+    if(mapeo->tab_input_registers == NULL){
+        return -1;                  //No existen los registros a asignar
+    }
+    
+    if(direccion + 1 > mapeo->nb_input_registers - 1){
+        return -1;                  //No hay registros suficientes para almacenar el valor de 32 bits
+    }
+    
+    uint16_t upper_byte, lower_byte;
+    
+    //bytes mas significtivos primero
+    if(!swap){
+        upper_byte = mapeo->tab_input_registers[direccion];
+        lower_byte = mapeo->tab_input_registers[direccion+1];
+        
+    }
+    else{
+        upper_byte = mapeo->tab_input_registers[direccion+1];
+        lower_byte = mapeo->tab_input_registers[direccion];
+    }
+    
+    int valor = (((int)upper_byte) << 16) + (int)lower_byte;                             //tenemos los bits
+    
+    return (float)valor;
 }
 

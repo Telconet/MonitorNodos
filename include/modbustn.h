@@ -2,7 +2,7 @@
 #define MODBUSTN_H
 
 #include "definiciones.h"
-#include <modbus.h>
+//#include <modbus.h>
 
 
 #define MODO_RS_232             1
@@ -24,10 +24,6 @@ int modbus_test();
  */
 int conectar_modbus_serial(int modo_puerto, int baudrate, char *tty, int data_bits, char paridad, int stop_bits, modbus_t *contexto, int id_esclavo);
 
-/**
- *Liberar el contexto modbus (libera los recursos usados)
- */
-void liberarContextoModbus(modbus_t *contexto);
 
 /**
  *Cierra la conectividad serial de modbus
@@ -41,6 +37,72 @@ void cerrar_modbus_serial(modbus_t *contexto);
  *Esta funcion es usada por conectar_modbus_serial
  */
 static int configurar_puerto_serial(int modo_puerto, int baudrate, char paridad, int stop_bits, int data_bits);
+
+
+/**
+ *Asignamos un bit register
+ */
+int asignarBit(modbus_mapping_t *mapeo, uint8_t valor, int direccion);
+
+
+/**
+ *Asignar un registro
+ */
+int asignarRegistro(modbus_mapping_t *mapeo, uint16_t valor, int direccion);
+
+/**
+ *Asignamos un input bit 
+ */
+int asignarInputBit(modbus_mapping_t *mapeo, uint8_t valor, int direccion);
+
+
+/**
+ *Asignar un registro input
+ */
+int asignarRegistroInput(modbus_mapping_t *mapeo, uint16_t valor, int direccion);
+
+
+/**
+ *Lee un bit register
+ */
+uint8_t leerBit(modbus_mapping_t *mapeo,  int direccion);
+
+
+/**
+ *Lee un registro
+ */
+uint16_t leerRegistro(modbus_mapping_t *mapeo, int direccion);
+
+/**
+ *Lee un input bit
+ */
+uint8_t leerInputBit(modbus_mapping_t *mapeo,  int direccion);
+
+
+/**
+ *Lee un input register
+ */
+uint16_t leerRegistroInput(modbus_mapping_t *mapeo, int direccion);
+
+/**
+ *Asignar dos registros con un float
+ */
+int asignarRegistroFloat(modbus_mapping_t *mapeo, float valor, int direccion, int swap);
+
+/**
+ *Lee dos registros consecutivos como un float
+ */
+float leerRegistroFloat(modbus_mapping_t *mapeo, int direccion, int swap);
+
+/**
+ *Asignar dos registros con un float
+ */
+int asignarRegistroInputFloat(modbus_mapping_t *mapeo, float valor, int direccion, int swap);
+
+/**
+ *Lee dos registros consecutivos como un float
+ */
+float leerRegistroInputFloat(modbus_mapping_t *mapeo, int direccion, int swap);
 
 
 
