@@ -114,54 +114,6 @@ void manejarComandosControlador(void *sd){
     return;
 }
 
-/**
- *Rutina que se encarga de llevar el control de cuando se deben enviar las alertas.
- */
-void temporizadorEnvioEmails(void *sd){
-    
-    struct configuracionMonitor *conf = (struct configuracionMonitor *)sd;
-    int tiempoEmails = conf->periodoEnvioEmails;
-    
-    int periodoSleep = 60;          //segundos
-    
-    //dormimos 1 minuto a la vez.
-    //la primera vez, dejamos pasar 3 minutos, para dar tiempo a la tarjeta que se inicialice
-    //y haga las primeras mediciones
-    sleep(3*periodoSleep);
-    
-    int i;
-    //volatile struct medicion *listaMedicionesTemporal = listaMediciones;
-    
-    //Entramos al lazo
-    while(1){
-        
-        pthread_mutex_lock(&mutexEmailsAlerta);
-        for(i = 0; i < NUMERO_MEDICIONES_ADC; i++){
-            
-            //revisarStatusMediciones notifica si envió e-mail. Si es positivo, este hilo
-            //lleva control de cuanto tiempo ha pasado desde el ultimo e-mail.
-            if(alertaEmailEnviada[i]){
-                
-                if(alertaEmailEnviada[i] && tiempoDesdeUltimaAlerta[i] < tiempoEmails ){            //Verficamos que dicho canal haya enviado alerta y que el tiempo sea menor de 30 minutos
-                    //alertaEmailEnviada[i] = 0;
-                    tiempoDesdeUltimaAlerta[i] += 1;
-#ifdef DEBUG
-                    printf("Tiempo desde ultima alerta de %d: %d\n", i, tiempoDesdeUltimaAlerta[i]);
-#endif
-                }
-                else if(alertaEmailEnviada[i] && tiempoDesdeUltimaAlerta[i] == tiempoEmails){
-                    alertaEmailEnviada[i] = 0;                            //damos nuevo permiso para mandar e-mails
-                    tiempoDesdeUltimaAlerta[i] = 0;
-                }
-            }
-        }
-        pthread_mutex_unlock(&mutexEmailsAlerta);
-
-        sleep(periodoSleep);
-    }
-}
-
-
 
 /**
  *Rutina que se encarga de monitorear exclusivamente la puerta de acceso al nodo
@@ -445,12 +397,35 @@ void monitorAiresAcondicionados(void *sd){
  */
 void monitorModbus(void *sd){
     
-    struct configuracionMonitor *conf = (struct configuracionMonitor *)sd;
-    //int intervaloMonitoreo = conf->intervaloMonitoreoPuerta;
-    //int j = 0;
+    modbus_t *contexto_modbus = (modbus_t *)sd;
     
+    //Solicitud recibida
+    uint8_t solicitud[MODBUS_TCP_MAX_ADU_LENGTH];
     
-    //TODO: obtener configuracion MODBUS del archivo de configuracion
+    //Empezamos a oir el puerto serio. Para este instante ya debemos tener
+    //el contexto y mapa de registros listo.
+    while(true){
+        
+        memset(solicitud, 0, MODBUS_TCP_MAX_ADU_LENGTH);
+        
+        int rc = modbus_receive(contexto_modbus, solicitud);                //esperamos comunicaci'on
+        
+        pthread_mutex_lock(&mutexModbus);
+        
+        int i = 0;
+        char buffer[2*MODBUS_TCP_MAX_ADU_LENGTH + 1];
+        memset(buffer, 0, 2*MODBUS_TCP_MAX_ADU_LENGTH + 1);
+        
+        for(i=0 ; i < MODBUS_TCP_MAX_ADU_LENGTH; i++){
+            sprintf(buffer,"%02X", solicitud[i]);              //para mostrar contenido de la solicitud
+        }
+        
+        printf("IFNO: Respondiendo solicitud MODBUS... %s\n", buffer);
+        modbus_reply(contexto_modbus, solicitud, rc, mapeo_modbus);    //MODBUS responde a la solicitud
+        
+        pthread_mutex_unlock(&mutexModbus);
+        
+    }
 }
         
         
@@ -1366,7 +1341,7 @@ struct configuracionMonitor* leerArchivoConfiguracion(char *rutaArchivo){
                     valores = obtenerValorConfig(linea, &num);
                     if(valores != NULL){
                         configuracion->modbusBaudrate = atoi(valores[0]);
-                        printf("INFO: Baud-rate de modbus: %d:1.\n", configuracion->modbusBaudrate);
+                        printf("INFO: Baud-rate de modbus: %d.\n", configuracion->modbusBaudrate);
                     }
                     else return NULL;
                 }
@@ -1406,35 +1381,41 @@ struct configuracionMonitor* leerArchivoConfiguracion(char *rutaArchivo){
                     valores = obtenerValorConfig(linea, &num);
                     if(valores != NULL){
                         configuracion->modbusParidad = valores[0][0];                   //Valor[0] = string "N\0", por lo tanto tomamos el caracter que necesitamos.
-                        printf("INFO: TTY de modbus: %c\n", configuracion->modbusParidad);
+                        printf("INFO: Bits de paridad de modbus: %c\n", configuracion->modbusParidad);
                     }
                     else return NULL;
                 }
                 else if(strstr(linea, MODBUS_MODO_PUERTO)!= NULL){
-                    if(modoComunicacion == USAR_MODBUS)
+                       
+                    if(modoComunicacion == USAR_MODBUS){
                         valores = obtenerValorConfig(linea, &num);          //Modo 1: RS232, Modo 2: RS485 HD, Modo 3: RS485 FD
+                        
                         if(valores != NULL){
+                            
                             configuracion->modbusModoPuerto = atoi(valores[0]);
+                            
                             if(configuracion->modbusModoPuerto == MODO_RS_232){
-                                printf("INFO: comunicacion modbus mediante RS-232\n");
+                                printf("INFO: Comunicacion modbus mediante RS-232\n");
                             }
                             else if(configuracion->modbusModoPuerto == MODO_RS_485_HD){
-                                printf("INFO: comunicacion modbus mediante RS-485 Half-Duplex\n");
+                                printf("INFO: Comunicacion modbus mediante RS-485 Half-Duplex\n");
                             }
                             else if(configuracion->modbusModoPuerto == MODO_RS_485_FD){
-                                printf("INFO: comunicacion modbus mediante RS-485 Full-Duplex\n");
+                                printf("INFO: Comunicacion modbus mediante RS-485 Full-Duplex\n");
                             }
                             else{
-                                 printf("ERROR: modo modbus invalio. Saliendo.\n");
+                                 printf("ERROR: Modo modbus invalido. Saliendo.\n");
                                  exit(-1);
                             }
+                        }
+                        else return NULL;
                     }
-                    else return NULL;
                 }
             }
         }
         fclose(archivo);
     }
+
     return NULL;
 }
 

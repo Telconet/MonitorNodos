@@ -146,6 +146,10 @@
 #define OID_VOLTAJE_AC_1 "1.3.6.1.4.1.65000.1.17"
 #define OID_VOLTAJE_AC_2 "1.3.6.1.4.1.65000.1.18"
 
+
+//Modo comunicacion (MODBUS o TCP)
+int modoComunicacion;
+
 //Estructuras
 //Medicion
 struct medicion{

@@ -1,12 +1,15 @@
 
-#cross compiler
+#Definimos el cross-compiler para ARM
 ARMCC=/usr/local/opt/crosstool/arm-linux/gcc-3.3.4-glibc-2.3.2/arm-linux/bin/gcc
 BASE=/usr/local/opt/crosstool/arm-linux/gcc-3.3.4-glibc-2.3.2/arm-linux/bin 
 DIR_ACTUAL=`pwd`
+
+#ubicacion de libreria necesarias para compilar el programa
 LIBRERIASOS=/usr/local/opt/crosstool/arm-linux/gcc-3.3.4-glibc-2.3.2/arm-linux/lib
 INCLUDEOS=/usr/local/opt/crosstool/arm-linux/gcc-3.3.4-glibc-2.3.2/arm-linux/include/modbus
 LIBRERIAMODBUS=/usr/local/opt/crosstool/arm-linux/gcc-3.3.4-glibc-2.3.2/arm-linux/lib/libmodbus.a
 
+#Compilamos los modulos, luego hacemos un linking
 monnod: ADC.o monitorNodo.o utilidades.o IPC.o monitordef.o modBD.o email.o mediciones.o DIO.o modbustn.o
 	$(ARMCC) -Wall -fPIC -Wno-trigraphs -mcpu=arm9 -o bin/monnod -g lib/tsadclib1624.o obj/ADC.o obj/monitorNodo.o obj/utilidades.o obj/IPC.o obj/monitordef.o  obj/modBD.o obj/email.o obj/mediciones.o obj/DIO.o  obj/modbustn.o -static -lpthread -lm $(LIBRERIAMODBUS)
 

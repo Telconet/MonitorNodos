@@ -99,20 +99,14 @@ int sd1, sd2;                                                         //Descript
 pid_t processID;                                                      //Nuestro pid
 pthread_t localComandosThread, monPuertaThread, monAiresAcondcionadosThread, hiloModbus;   //thread de comandos, puerta y temporizador
 struct nodo informacion_nodo;                                         //Informacion del nodo
-//netsnmp_session **ss;                                                 //Sesiones SNMP
 struct configuracionMonitor* configuracion;                           //configuracion del monitor
 volatile struct medicion *listaMediciones;                            //La lista de las mediciones mas actuales
-int modoComunicacion;
-
-
 
 
 //Variables para envio de e-mails de alertas
-//float medicionAnterior[NUMERO_MEDICIONES_ADC];                     //contiene la medicion anterior a la actual.  Se inicializa en 0
 int alertaEmailEnviada[NUMERO_MEDICIONES_ADC];                          //contiene un bandera de si fue enviado un e-mail, por cada canal medido. Se inicializa en 0
 int tiempoDesdeUltimaAlerta[NUMERO_MEDICIONES_ADC];                //Cuanto tiempo ha pasado (en minutos), desde la ultima alerta
-pthread_mutex_t mutexEmailsAlerta;                                 //Mutex para acceder a las dos variables de arriba
-
+pthread_mutex_t mutexModbus;    
 
 //Definicion de funciones
 
@@ -121,7 +115,6 @@ void salir(int status);
 //Todos estos tenian tipo void * en vez de void
 void manejarComandosControlador(void *sd);
 
-void temporizadorEnvioEmails(void *sd);
 
 void monitorPuerta(void *sd);
 
@@ -130,7 +123,6 @@ void monitorAiresAcondicionados(void *sd);
 void monitorModbus(void *sd);
 
 void recComandosEnvResp(void *ptr);
-//...
 
 void manejadorSenalSIGTERMSIGINT(int sig);
 

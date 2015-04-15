@@ -245,9 +245,13 @@ int realizarMediciones(volatile struct medicion **med) { //CHECK!!!!!!!!!
                 //En la iteracion impar, ya tenemos los datos leidos del ADC
                 voltajeADC = promedioVoltaje(data_canal_2, noMuestras, rango);
             }
+            
+            //TODO MUTEX MODBUS...
 
             //Vemos a que medicion nos referimos
             //y realizamos el calculo correspondiente.
+            pthread_mutex_lock(&mutexModbus);
+            
             if (i == CANAL_TEMPERATURA_1) {
                 //temperatura
                 pthread_mutex_lock(&mutexTemperatura);
@@ -255,9 +259,10 @@ int realizarMediciones(volatile struct medicion **med) { //CHECK!!!!!!!!!
                 pthread_mutex_unlock(&mutexTemperatura);
 
                 //Sensor 1 esta junto a sensor de humedad               CHECK!!
-                if (i == CANAL_TEMPERATURA_1) {
-                    temperatura = actual->valor;
-                }
+                //if (i == CANAL_TEMPERATURA_1) {
+                temperatura = actual->valor;
+                asignarRegistroInputFloat(mapeo_modbus, actual->valor, REGISTRO_INPUT_TEMPERATURA, NO_SWAP);
+                //}
 
                 //printf("\nSe ha obtenido la medicion del canal %d: %.4f, temperatura: %.2f C\n", i, voltajeADC, actual->valor);
                 actual = actual->siguiente;
@@ -266,52 +271,129 @@ int realizarMediciones(volatile struct medicion **med) { //CHECK!!!!!!!!!
             if (i == CANAL_COMBUSTIBLE || i == CANAL_GENERADOR) {
                 //voltaje del relé
                 actual->valor = voltajeADC;
+                
+                int onOrOff = OFF;
+                
+                //Vemos si es ON or OFF
+                if(actual->valor < 1.0f){
+                    onOrOff = OFF;
+                }
+                else{
+                    onOrOff = ON;
+                }
+                
+                //Asignamos registro
+                if(i == CANAL_COMBUSTIBLE){
+                    asignarInputBit(mapeo_modbus, onOrOff, INPUT_BIT_COMBUSTIBLE);
+                }
+                else if(i == CANAL_GENERADOR){
+                    asignarInputBit(mapeo_modbus, onOrOff, INPUT_BIT_GENERADOR);
+                }
 
                 actual = actual->siguiente;
             } else if (i == CANAL_HUMEDAD) {
                 //humedad
                 actual->valor = voltajeAHumedad(voltajeADC, temperatura);
-                //printf("\nSe ha obtenido la medicion del canal %d: %.2f, humedad: %.2f %%HR\n,", i, voltajeADC, actual->valor);
+                asignarRegistroInputFloat(mapeo_modbus, actual->valor, REGISTRO_INPUT_HUMEDAD, NO_SWAP);
                 actual = actual->siguiente;
             } else if (i == CANAL_VOLTAJE_DC_1 || i == CANAL_VOLTAJE_DC_2 || i == CANAL_VOLTAJE_DC_3 || i == CANAL_VOLTAJE_DC_4) {
-                //voltajes DC
-                //
-                //if(minimos[i] > 30.0f){
+                
                 actual->valor = voltajeAVoltajeDC(voltajeADC); //esto cambiara dependiendo de como se asignen
-                //}
-                /*else{
-                    actual->valor = voltajeAVoltajeDC(voltajeADC, VOLTAJE_DC_24V);
-                    actual = actual->siguiente;
-                }*/
-                //printf("\nSe ha obtenido la medicion del canal %d: %.2f, voltaje DC: %.2f V\n", i, voltajeADC, actual->valor);
+                
+                //Asignamos el registro modbus
+                switch(i){
+                    case CANAL_VOLTAJE_DC_1:
+                        asignarRegistroInputFloat(mapeo_modbus, actual->valor, REGISTRO_INPUT_V_DC_1, NO_SWAP);
+                        break;
+                    case CANAL_VOLTAJE_DC_2:
+                        asignarRegistroInputFloat(mapeo_modbus, actual->valor, REGISTRO_INPUT_V_DC_2, NO_SWAP);
+                        break;
+                    case CANAL_VOLTAJE_DC_3:
+                        asignarRegistroInputFloat(mapeo_modbus, actual->valor, REGISTRO_INPUT_V_DC_3, NO_SWAP);
+                        break;
+                    case CANAL_VOLTAJE_DC_4:
+                        asignarRegistroInputFloat(mapeo_modbus, actual->valor, REGISTRO_INPUT_V_DC_4, NO_SWAP);
+                        break;
+                    default:
+                        break;
+                }
+                
                 actual = actual->siguiente;
+                
             } else if (i == CANAL_CORRIENTE_DC_1 || i == CANAL_CORRIENTE_DC_2 || i == CANAL_CORRIENTE_DC_3 || i == CANAL_CORRIENTE_DC_4) {
                 //corriente DC
                 actual->valor = voltajeACorrienteDC(voltajeADC);
-                //printf("\nSe ha obtenido la medicion del canal %d: %.2f, Corriente DC: %.2f A\n", i, voltajeADC, actual->valor);
+                
+                //Asignamos el registro modbus
+                switch(i){
+                    case CANAL_CORRIENTE_DC_1:
+                        asignarRegistroInputFloat(mapeo_modbus, actual->valor, REGISTRO_INPUT_I_DC_1, NO_SWAP);
+                        break;
+                    case CANAL_CORRIENTE_DC_2:
+                        asignarRegistroInputFloat(mapeo_modbus, actual->valor, REGISTRO_INPUT_I_DC_2, NO_SWAP);
+                        break;
+                    case CANAL_CORRIENTE_DC_3:
+                        asignarRegistroInputFloat(mapeo_modbus, actual->valor, REGISTRO_INPUT_I_DC_3, NO_SWAP);
+                        break;
+                    case CANAL_CORRIENTE_DC_4:
+                        asignarRegistroInputFloat(mapeo_modbus, actual->valor, REGISTRO_INPUT_I_DC_4, NO_SWAP);
+                        break;
+                    default:
+                        break;
+                }
+                
                 actual = actual->siguiente;
             } else if (i == CANAL_CORRIENTE_AC_1 || i == CANAL_CORRIENTE_AC_2 || i == CANAL_CORRIENTE_AC_3 || i == CANAL_CORRIENTE_AC_4) {
                 //DATACENTER
-                //actual->valor = voltajeACorrienteAC(data_canal_1, noMuestras, rango); //Corriente AC solo esta en canales pares.
+                
                 actual->valor = voltajeACorrienteAC(data_canal_1, noMuestras, rango);
-                //printf("\nSe ha obtenido la medicion del canal %d: %.2f, Corriente AC: %.2f A RMS\n", i, voltajeADC, actual->valor);
+                
+                //Asignamos el registro modbus
+                switch(i){
+                    case CANAL_CORRIENTE_AC_1:
+                        asignarRegistroInputFloat(mapeo_modbus, actual->valor, REGISTRO_INPUT_I_AC_1, NO_SWAP);
+                        break;
+                    case CANAL_CORRIENTE_AC_2:
+                        asignarRegistroInputFloat(mapeo_modbus, actual->valor, REGISTRO_INPUT_I_AC_2, NO_SWAP);
+                        break;
+                    case CANAL_CORRIENTE_AC_3:
+                        asignarRegistroInputFloat(mapeo_modbus, actual->valor, REGISTRO_INPUT_I_AC_3, NO_SWAP);
+                        break;
+                    case CANAL_CORRIENTE_AC_4:
+                        asignarRegistroInputFloat(mapeo_modbus, actual->valor, REGISTRO_INPUT_I_AC_4, NO_SWAP);
+                        break;
+                    default:
+                        break;
+                }
+                
                 actual = actual->siguiente;
+                
             } else if (i == CANAL_VOLTAJE_AC_1 || i == CANAL_VOLTAJE_AC_2) {
                 //Voltaje AC
                 actual->valor = voltajeAVoltajeAC(voltajeADC);
-                //printf("\nSe ha obtenido la medicion del canal %d: %.2f, Voltaje AC: %.2f V RMS\n", i, voltajeADC, actual->valor);
+                
+                switch(i){
+                    case CANAL_VOLTAJE_AC_1:
+                        asignarRegistroInputFloat(mapeo_modbus, actual->valor, REGISTRO_INPUT_V_AC_1, NO_SWAP);
+                        break;
+                    case CANAL_VOLTAJE_AC_2:
+                        asignarRegistroInputFloat(mapeo_modbus, actual->valor, REGISTRO_INPUT_V_AC_2, NO_SWAP);
+                        break;
+                    default:
+                        break;
+                }
+                
                 actual = actual->siguiente;
             }
-
-            /*if(actual == NULL){
-                printf("Actual es NULL\n");
-            }*/
+            
+            pthread_mutex_unlock(&mutexModbus);
         }
 
         free(data_canal_1);
-        free(data_canal_2);
+        free(data_canal_2);        
 
         return 0;
+    
     } else return -1;
 
 }
@@ -544,20 +626,41 @@ int activarRele(int numeroRele, char *nombreNodo, char *rutaArchivoTipoColumnas)
 
     if (!status) {
 
-        //Registramos el evento
-        char *buffer = malloc(sizeof (char) * 20);
-
-        if (buffer == NULL) {
-            printf("ERROR: No se pudo registrar el evento de activacion de rele.\n");
-            return -1;
+        if(modoComunicacion == USAR_TCP){
+            
+            //Registramos el evento
+            char *buffer = malloc(sizeof (char) * 20);
+    
+            if (buffer == NULL) {
+                printf("ERROR: No se pudo registrar el evento de activacion de rele.\n");
+                return -1; //Se pudo desactivar el rele, pero no almacenar el evento. Usamos otros codigo
+            }
+    
+            memset(buffer, 0, 20);
+            sprintf(buffer, "rele %d", numeroRele);
+        
+            almacenarEvento(buffer, nombreNodo, rutaArchivoTipoColumnas, "activacion", "ninguna");
+            
+            free(buffer);
         }
-
-        memset(buffer, 0, 20);
-        sprintf(buffer, "rele %d", numeroRele);
-
-        almacenarEvento(buffer, nombreNodo, rutaArchivoTipoColumnas, "activacion", "ninguna"); //--> segementation fault.    
-
-        free(buffer);
+        else if(modoComunicacion == USAR_MODBUS){
+            
+            switch(numeroRele){
+            
+                case 1:
+                    asignarBit(mapeo_modbus, ON, COIL_RELE_0);
+                    break;
+                case 2:
+                    asignarBit(mapeo_modbus, ON, COIL_RELE_1);
+                    break;
+                case 3:
+                    asignarBit(mapeo_modbus, ON, COIL_RELE_2);
+                    break;
+                case 4:
+                    asignarBit(mapeo_modbus, ON, COIL_RELE_3);
+                    break;
+            }
+        }  
 
         return 0;
     } else {
@@ -606,21 +709,42 @@ int desactivarRele(int numeroRele, char *nombreNodo, char *rutaArchivoTipoColumn
 
     if (!status) {
         printf("INFO: Rele %d desactivado.\n", numeroRele);
-
-        //Registramos el evento
-        char *buffer = malloc(sizeof (char) * 20);
-
-        if (buffer == NULL) {
-            printf("ERROR: No se pudo registrar el evento de desactivacion de rele.\n");
-            return -1; //Se pudo desactivar el rele, pero no almacenar el evento. Usamos otros codigo
+    
+        if(modoComunicacion == USAR_TCP){
+            
+            //Registramos el evento
+            char *buffer = malloc(sizeof (char) * 20);
+    
+            if (buffer == NULL) {
+                printf("ERROR: No se pudo registrar el evento de desactivacion de rele.\n");
+                return -1; //Se pudo desactivar el rele, pero no almacenar el evento. Usamos otros codigo
+            }
+    
+            memset(buffer, 0, 20);
+            sprintf(buffer, "rele %d", numeroRele);
+        
+            almacenarEvento(buffer, nombreNodo, rutaArchivoTipoColumnas, "desactivacion", "ninguna");
+            
+            free(buffer);
         }
-
-        memset(buffer, 0, 20);
-        sprintf(buffer, "rele %d", numeroRele);
-
-        almacenarEvento(buffer, nombreNodo, rutaArchivoTipoColumnas, "desactivacion", "ninguna");
-
-        free(buffer);
+        else if(modoComunicacion == USAR_MODBUS){
+            
+            switch(numeroRele){
+            
+                case 1:
+                    asignarBit(mapeo_modbus, OFF, COIL_RELE_0);
+                    break;
+                case 2:
+                    asignarBit(mapeo_modbus, OFF, COIL_RELE_1);
+                    break;
+                case 3:
+                    asignarBit(mapeo_modbus, OFF, COIL_RELE_2);
+                    break;
+                case 4:
+                    asignarBit(mapeo_modbus, OFF, COIL_RELE_3);
+                    break;
+            }
+        }  
 
         return 0;
     } else {

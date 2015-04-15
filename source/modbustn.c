@@ -1,7 +1,7 @@
 #include "modbustn.h"
 
 
-static int configurar_puerto_serial(int modo_puerto, int baudrate, char paridad, int stop_bits, int data_bits){
+int configurar_puerto_serial(int modo_puerto, int baudrate, char paridad, int stop_bits, int data_bits){
     
     //En reset, el puerto COM2 se configura como RS-232 por defecto.
     
@@ -72,8 +72,7 @@ static int configurar_puerto_serial(int modo_puerto, int baudrate, char paridad,
     
     close(fd_com2);
     
-    return 0;
-    
+    return 0; 
 }
 
 
@@ -103,12 +102,10 @@ int conectar_modbus_serial(int modo_puerto, int baudrate, char *tty, int data_bi
     //Establecer nuestra id de esclavo
     modbus_set_slave(contexto, id_esclavo);
     
-    //TODO crear mapping de bits y registers
-    
     //El siguiente mapping sera usado.
     
     //-Coils para salidas DIGITALES (RELAYS)
-    //DIO0 a DIO3 --> Coils 1 a 4
+    //DIO0 a DIO3 --> Coils 1 a 4       (00001 a 00004)
     //-Puerta
     //DIO4        --> Discrete input 1 (10001)
     //Combustible --> Discrete input 2 (10002)      
@@ -133,8 +130,8 @@ int conectar_modbus_serial(int modo_puerto, int baudrate, char *tty, int data_bi
     //V DC 4                   11                       40029 - 40030
     //Humedad                  15                       40031 - 40032
     
-    //4 bits (r/w), 3 input bits (read only), 0 HR (r/w), 16 input register (read only).
-    mapeo_modbus = modbus_mapping_new(4, 3, 0, 16);
+    //4 bits (r/w), 3 input bits (read only), 0 HR (r/w), 32 input register (read only).
+    mapeo_modbus = modbus_mapping_new(4, 3, 10, 32);
     
     
     if(mapeo_modbus == NULL){
@@ -155,12 +152,11 @@ int conectar_modbus_serial(int modo_puerto, int baudrate, char *tty, int data_bi
 
 
 
-
 /**
  *Configura los registros del puerto COM2 de la tarjeta TS7200 para RS-232, RS-485 HD o RS-485 FD.
  *Esta funcion es usada por conectar_modbus_serial
  */
-static int configurar_puerto_serial(int modo_puerto, int baudrate, char paridad, int stop_bits, int data_bits);
+
 
 
 /**
@@ -308,33 +304,44 @@ uint16_t leerRegistroInput(modbus_mapping_t *mapeo, int direccion){
 
 int asignarRegistroFloat(modbus_mapping_t *mapeo, float valor, int direccion, int swap){
     
-    if(mapeo->tab_registers == NULL){
+     if(mapeo->tab_registers == NULL){
         return -1;                  //No existen los registros a asignar
     }
     
     if(direccion + 1 > mapeo->nb_registers - 1){
+        printf("what");
         return -1;                  //No hay registros suficientes para almacenar el valor de 32 bits
     }
     
-    uint16_t upper_byte = (int)valor & 0xffff0000;
-    uint16_t lower_byte = (int)valor & 0x0000ffff;
+    float copia_valor = valor;
+    
+    //Representacion en memoria
+    unsigned char valor_mem[4] = {0};         //32 bitss
+    
+    memcpy(valor_mem, &copia_valor, 4);                                        //obtenemos los bits en memoria (nos saltamos los castings hechos por C)
+    //printf("valor 0x%X, %f\n", *(unsigned int*)valor, *valor);          //Si no se hace asi, float es promocianado a DOUBLE! (para hex representation)
+    
+    unsigned int upper_byte =  0;
+    unsigned int lower_byte =  0;
+    
+    memcpy(&upper_byte, valor_mem+2, 2);
+    memcpy(&lower_byte, valor_mem, 2);
     
     //bytes mas significtivos primero
     if(!swap){
-        mapeo->tab_registers[direccion] = upper_byte;
-        mapeo->tab_registers[direccion+1] = lower_byte;
-        
+        memcpy(&mapeo->tab_registers[direccion], &upper_byte, 2);
+        memcpy(&mapeo->tab_registers[direccion+1], &lower_byte, 2);
     }
     else{
-        mapeo->tab_registers[direccion] = lower_byte;
-        mapeo->tab_registers[direccion+1] = upper_byte;
+        memcpy(&mapeo->tab_registers[direccion], &lower_byte, 2);
+        memcpy(&mapeo->tab_registers[direccion+1], &upper_byte, 2);
     }
     
     return 0;
 }
 
 
-float leerRegistroFloat(modbus_mapping_t *mapeo, int direccion, int swap){
+int leerRegistroFloat(modbus_mapping_t *mapeo, int direccion, float *valor, int swap){
     
     if(mapeo->tab_registers == NULL){
         return -1;                  //No existen los registros a asignar
@@ -344,22 +351,21 @@ float leerRegistroFloat(modbus_mapping_t *mapeo, int direccion, int swap){
         return -1;                  //No hay registros suficientes para almacenar el valor de 32 bits
     }
     
-    uint16_t upper_byte, lower_byte;
+    unsigned short *addr = (unsigned short *)valor;         //para poder acceder a direcciones de 2 bytes en 2 bytes..
     
     //bytes mas significtivos primero
     if(!swap){
-        upper_byte = mapeo->tab_registers[direccion];
-        lower_byte = mapeo->tab_registers[direccion+1];
+
+        memcpy(addr+1, &mapeo->tab_registers[direccion], 2);
+        memcpy(addr, &mapeo->tab_registers[direccion+1], 2);       
         
     }
     else{
-        upper_byte = mapeo->tab_registers[direccion+1];
-        lower_byte = mapeo->tab_registers[direccion];
+        memcpy(addr, &mapeo->tab_registers[direccion],2);
+        memcpy(addr+1, &mapeo->tab_registers[direccion+1],2);
     }
     
-    int valor = (((int)upper_byte) << 16) + (int)lower_byte;                            //tenemos los bits
-    
-    return (float)valor;
+    return 0;
 }
 
 
@@ -375,25 +381,37 @@ int asignarRegistroInputFloat(modbus_mapping_t *mapeo, float valor, int direccio
         return -1;                  //No hay registros suficientes para almacenar el valor de 32 bits
     }
     
-    uint16_t upper_byte = (int)valor & 0xffff0000;
-    uint16_t lower_byte = (int)valor & 0x0000ffff;
+    float copia_valor = valor;
+    
+    //Representacion en memoria
+    unsigned char valor_mem[4] = {0};         //32 bitss
+    
+    memcpy(valor_mem, &copia_valor, 4);                                        //obtenemos los bits en memoria (nos saltamos los castings hechos por C)
+    //printf("valor 0x%X, %f\n", *(unsigned int*)valor, *valor);          //Si no se hace asi, float es promocianado a DOUBLE! (para hex representation)
+    
+    unsigned int upper_byte =  0;
+    unsigned int lower_byte =  0;
+    
+    memcpy(&upper_byte, valor_mem+2, 2);
+    memcpy(&lower_byte, valor_mem, 2);
     
     //bytes mas significtivos primero
     if(!swap){
-        mapeo->tab_input_registers[direccion] = upper_byte;
-        mapeo->tab_input_registers[direccion+1] = lower_byte;
-        
+        memcpy(&mapeo->tab_input_registers[direccion], &upper_byte, 2);
+        memcpy(&mapeo->tab_input_registers[direccion+1], &lower_byte, 2);
+        //printf("Alamcenado 0x%X, 0x%X\n", mapeo->tab_input_registers[direccion], mapeo->tab_input_registers[direccion+1]);
     }
     else{
-        mapeo->tab_input_registers[direccion] = lower_byte;
-        mapeo->tab_input_registers[direccion+1] = upper_byte;
+        memcpy(&mapeo->tab_input_registers[direccion], &lower_byte, 2);
+        memcpy(&mapeo->tab_input_registers[direccion+1], &upper_byte, 2);
+        //printf("Alamcenado 0x%X, 0x%X\n", mapeo->tab_input_registers[direccion+1], mapeo->tab_input_registers[direccion]);
     }
     
     return 0;
 }
 
 
-float leerRegistroInputFloat(modbus_mapping_t *mapeo, int direccion, int swap){
+int leerRegistroInputFloat(modbus_mapping_t *mapeo, int direccion, float *valor, int swap){
     
     if(mapeo->tab_input_registers == NULL){
         return -1;                  //No existen los registros a asignar
@@ -403,21 +421,19 @@ float leerRegistroInputFloat(modbus_mapping_t *mapeo, int direccion, int swap){
         return -1;                  //No hay registros suficientes para almacenar el valor de 32 bits
     }
     
-    uint16_t upper_byte, lower_byte;
-    
+    unsigned short *addr = (unsigned short *)valor;         //para poder acceder a direcciones de 2 bytes en 2 bytes..
+        
     //bytes mas significtivos primero
     if(!swap){
-        upper_byte = mapeo->tab_input_registers[direccion];
-        lower_byte = mapeo->tab_input_registers[direccion+1];
+        memcpy(addr+1, &mapeo->tab_input_registers[direccion], 2);
+        memcpy(addr, &mapeo->tab_input_registers[direccion+1], 2);       
         
     }
     else{
-        upper_byte = mapeo->tab_input_registers[direccion+1];
-        lower_byte = mapeo->tab_input_registers[direccion];
+        memcpy(addr, &mapeo->tab_input_registers[direccion],2);
+        memcpy(addr+1, &mapeo->tab_input_registers[direccion+1],2);
     }
     
-    int valor = (((int)upper_byte) << 16) + (int)lower_byte;                             //tenemos los bits
-    
-    return (float)valor;
+    return 0;
 }
 

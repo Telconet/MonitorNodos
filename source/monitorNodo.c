@@ -7,22 +7,36 @@
 int activarPuerto(puerto_DIO puerto_DIO_0);
 
 
-
-/**
- *Rutina para hacer del proceso un daemon. TODO
- *
- */
-void daemonize() {
-
-    int i = fork(); //Emancipamos el proceso...
-    if (i < 0) exit(1);
-    if (i > 0) exit(0);
-}
-
 /**
  *Programa principal
  */
 int main(int argc, char *argv[]) {
+    
+    
+    
+    //MODBUS TEST
+    /*modbus_t *my_mb_ctx;
+    int what =  conectar_modbus_serial(MODO_RS_232, 19200, COM2, 8, 'N', 1, my_mb_ctx, 10);
+    
+    float valor = 3.843f;
+    
+    float leido = 4.5f;   			
+    
+    int st = asignarRegistroInputFloat(mapeo_modbus, valor, 1,NO_SWAP);
+    
+    if(st == -1){
+	printf(" Error modbus\n");
+    }
+    
+    printf("Antes leerRegistroInputFloat (valor) 0x%X\n", *(unsigned int*)&leido);
+    leerRegistroInputFloat(mapeo_modbus, 1, &leido, NO_SWAP);
+    
+    printf("Leido (hex) 0x%X\n", *(unsigned int*)&leido);
+    printf("Leido (float): %f\n", leido);
+    
+    exit(-1);*/
+    
+    //***********
 
     //cambiemos el directorio de trabajo
     chdir(DIRECTORIO_DE_TRABAJO);
@@ -62,18 +76,22 @@ int main(int argc, char *argv[]) {
 
     char * rutaArchivoConfiguracion = argv[1];
     configuracion = leerArchivoConfiguracion(rutaArchivoConfiguracion);
+    
+    
 
     if (configuracion == NULL) {
-        printf("ERROR: Existe un error en el formato del archivo de configuracion %s,revise la configuracion del mismo. Este programa se cerrara.\n", rutaArchivoConfiguracion);
+        printf("ERROR: Existe un error en el formato del archivo de configuracion %s, revise la configuracion del mismo. Este programa se cerrara.\n", rutaArchivoConfiguracion);
         salir(EXIT_FAILURE);
     }
 
     //Solo para informacion
     configuracion->interfazRed = obtenerInterfazDeRed();
-
+    
     //Esta rutina inicializa todo el sistema de mediciones
     //(asigna memoria, inicializa y configura el ADC, etc)
     inicializarSistemaMediciones(NUMERO_MUESTRAS, NUMERO_MAXIMO_CANALES_ADC);
+    
+    
 
     //Iniciamos los puerto DIO como salida
     configurarPuertosDIO();
@@ -150,15 +168,23 @@ int main(int argc, char *argv[]) {
 			    configuracion->modbusParidad, configuracion->modbusStopbits, contexto_modbus, configuracion->modbusSlaveId);
     
     
-    //Creamos un thread para controlar acceso a las puertas.
-    int tModbus;
+    //Creamos un thread para modbus
+    if(modoComunicacion == USAR_MODBUS){
+	int tModbus;
+	
+	res = pthread_mutex_init(&mutexModbus, NULL);
+	
+	if(!res){
+	    printf("ERROR: No se pudo crear el mutex modbus. Saliendo.");
+	    exit(-1);
+	}
+       
+	tModbus = pthread_create(&monPuertaThread, NULL, (void *)monitorModbus, (void *) contexto_modbus);
     
-
-    tModbus = pthread_create(&monPuertaThread, NULL, (void *)monitorModbus, (void *) configuracion);
-
-    if (tPuerta != 0) {
-        perror("ERROR: No se pudo crear el thread de monitoreo modbus. Saliendo...\n");
-	exit(-1);
+	if (tModbus != 0) {
+	    perror("ERROR: No se pudo crear el thread Modbus. Saliendo...\n");
+	    exit(-1);
+	}
     }
 
     char *hora = obtenerHora();
