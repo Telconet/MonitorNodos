@@ -11,8 +11,7 @@ int activarPuerto(puerto_DIO puerto_DIO_0);
  *Programa principal
  */
 int main(int argc, char *argv[]) {
-    
-    
+
     
     //MODBUS TEST
     /*modbus_t *my_mb_ctx;
@@ -54,6 +53,7 @@ int main(int argc, char *argv[]) {
 
     //Aqui reportamos nuestro pid al proceso de control
     reportarPID(ARCHIVO_PROCESS_ID_DAEMON, processID);
+    
 
     //Leemos el archivo de configuracion. Extraemos la ruta del archivo
     //de los argumentos de ejecucion
@@ -89,14 +89,15 @@ int main(int argc, char *argv[]) {
     
     //Esta rutina inicializa todo el sistema de mediciones
     //(asigna memoria, inicializa y configura el ADC, etc)
+    
     inicializarSistemaMediciones(NUMERO_MUESTRAS, NUMERO_MAXIMO_CANALES_ADC);
-    
-    
 
     //Iniciamos los puerto DIO como salida
     configurarPuertosDIO();
     printf("INFO: Puertos entrada/salida configurados.\n");
-
+    
+    
+    
     //Creamos el thread que será el local de recepcion de comandos
     //y envio de respuestas
     int tRet;
@@ -161,25 +162,37 @@ int main(int argc, char *argv[]) {
     }
     
     //Inicializamos el sistema MODBUS
-    modbus_t *contexto_modbus;
-    
-    //Al retornar, contexto_modbus apunta a la estructura creada
-    conectar_modbus_serial(configuracion->modbusModoPuerto, configuracion->modbusBaudrate, configuracion->modbusTTY, configuracion->modbusDatabits,
-			    configuracion->modbusParidad, configuracion->modbusStopbits, contexto_modbus, configuracion->modbusSlaveId);
-    
+    modbus_t *contexto_modbus = NULL;
+    printf("MonitorNodo context pointer... %p\n", contexto_modbus);
     
     //Creamos un thread para modbus
     if(modoComunicacion == USAR_MODBUS){
-	int tModbus;
 	
-	res = pthread_mutex_init(&mutexModbus, NULL);
+	//Al retornar, contexto_modbus apunta a la estructura creada
+	int conn = conectar_modbus_serial(configuracion->modbusModoPuerto, configuracion->modbusBaudrate, configuracion->modbusTTY, configuracion->modbusDatabits,
+			    configuracion->modbusParidad, configuracion->modbusStopbits, &contexto_modbus, configuracion->modbusSlaveId);
 	
-	if(!res){
-	    printf("ERROR: No se pudo crear el mutex modbus. Saliendo.");
+	//printf("MonitorNodo (after conectar_modbus_serial) context pointer... %p\n", contexto_modbus);
+	
+	if(contexto_modbus == NULL){
+	    printf("ERROR: No se pudo crear el contexto modbus...%d\n", conn);
+	    exit(-1);
+	}
+    
+	if(conn != 0){
+	    perror("Error al crear la conexion modbus");
+	    exit(-1);
+	}
+	
+	int res2 = pthread_mutex_init(&mutexModbus, NULL);
+	
+	if(res2 != 0){
+	    perror("ERROR: No se pudo crear el mutex modbus. Saliendo.");
 	    exit(-1);
 	}
        
-	tModbus = pthread_create(&monPuertaThread, NULL, (void *)monitorModbus, (void *) contexto_modbus);
+       
+	int tModbus = pthread_create(&monPuertaThread, NULL, (void *)monitorModbus, (void *) contexto_modbus);
     
 	if (tModbus != 0) {
 	    perror("ERROR: No se pudo crear el thread Modbus. Saliendo...\n");
@@ -232,7 +245,9 @@ int main(int argc, char *argv[]) {
 	
 	if(modoComunicacion == USAR_TCP){
 	    almacenarMediciones(&listaMediciones, informacion_nodo.id, configuracion->rutaArchivoColumnasBDADC, NUMERO_MEDICIONES_ADC, stp, sts);
+	
 	}
+	
 	
 	//configuracion->valoresMinimosPermitidosMediciones, configuracion->numeroValoresMinimosPermitidos);
         sleep(configuracion->intervaloMonitoreo); //damos tiempo que sensores se activen, etc.

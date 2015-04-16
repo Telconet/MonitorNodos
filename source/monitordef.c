@@ -399,6 +399,10 @@ void monitorModbus(void *sd){
     
     modbus_t *contexto_modbus = (modbus_t *)sd;
     
+    if(sd == NULL){
+        printf("out!\n");
+    }
+    
     //Solicitud recibida
     uint8_t solicitud[MODBUS_TCP_MAX_ADU_LENGTH];
     

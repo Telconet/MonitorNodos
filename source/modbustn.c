@@ -82,7 +82,7 @@ void cerrar_modbus_serial(modbus_t *contexto){
 }
 
 
-int conectar_modbus_serial(int modo_puerto, int baudrate, char *tty, int data_bits, char paridad, int stop_bits, modbus_t *contexto, int id_esclavo){
+int conectar_modbus_serial(int modo_puerto, int baudrate, char *tty, int data_bits, char paridad, int stop_bits, modbus_t **contexto, int id_esclavo){
     
     //Configuramos el puerto de hardware
     int status = configurar_puerto_serial(modo_puerto, baudrate, paridad, stop_bits, data_bits);
@@ -92,16 +92,12 @@ int conectar_modbus_serial(int modo_puerto, int baudrate, char *tty, int data_bi
         return -1;
     }
     
-    contexto = modbus_new_rtu(tty, baudrate, paridad, data_bits, stop_bits);
+    *contexto = modbus_new_rtu(tty, baudrate, paridad, data_bits, stop_bits);
     
-    if (contexto == NULL) {
-        printf("ERROR: No se pudo crear el contexto modbus.\n");
-        return -1;
-    }
     
     //Establecer nuestra id de esclavo
-    modbus_set_slave(contexto, id_esclavo);
-    
+    modbus_set_slave(*contexto, id_esclavo);
+
     //El siguiente mapping sera usado.
     
     //-Coils para salidas DIGITALES (RELAYS)
@@ -131,21 +127,24 @@ int conectar_modbus_serial(int modo_puerto, int baudrate, char *tty, int data_bi
     //Humedad                  15                       40031 - 40032
     
     //4 bits (r/w), 3 input bits (read only), 0 HR (r/w), 32 input register (read only).
-    mapeo_modbus = modbus_mapping_new(4, 3, 10, 32);
-    
+    mapeo_modbus = modbus_mapping_new(4, 3, 0, 32);
+
     
     if(mapeo_modbus == NULL){
         printf("ERROR: No se pudo crear el mapeo modbus de los registros\n");
-        modbus_free(contexto);
+        modbus_free(*contexto);
         return -1;
     }
     
     //Iniciamos la conexion serial
-    if(modbus_connect(contexto) == -1){
+    if(modbus_connect(*contexto) == -1){
         printf("ERROR: No se pudo iniciar la comunicacion modbus serial\n");
-        modbus_free(contexto);
+        modbus_free(*contexto);
         return -1;
     }
+    
+    
+    //printf("contectar_modbus_serial context pointer... %p\n", *contexto);
     
     return 0;
 }

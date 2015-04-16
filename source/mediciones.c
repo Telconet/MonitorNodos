@@ -228,7 +228,6 @@ int realizarMediciones(volatile struct medicion **med) { //CHECK!!!!!!!!!
         //TODO: Si el canal no esta siendo USADO, sobretodo el de corriente AC, almancenar CERO!!!
         //USAR LISTA DE CANALES ACTIVOS.
         for (i = 0; i < NUMERO_CANALES_ADC; i++) {
-        
 
             //el ADC se lee en las iteraciones pares.
             if (i % 2 == 0) {

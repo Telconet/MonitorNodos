@@ -83,7 +83,7 @@ int modbus_test();
 /**
  *Crea la conexion MODBUS RTU
  */
-int conectar_modbus_serial(int modo_puerto, int baudrate, char *tty, int data_bits, char paridad, int stop_bits, modbus_t *contexto, int id_esclavo);
+int conectar_modbus_serial(int modo_puerto, int baudrate, char *tty, int data_bits, char paridad, int stop_bits, modbus_t **contexto, int id_esclavo);
 
 
 /**
