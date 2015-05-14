@@ -36,6 +36,7 @@
 #define HABILITAR_ALERTAS "habilitar-alertas"
 #define PERIODO_ENVIO_EMAILS "periodo-envio-emails"
 #define RAZON_CT "razon-transformador-ct"
+#define IP_SERVIDOR_DATOS "servidor-datos" 
 
 
 //Valore predeterminados de monitoreo
@@ -58,6 +59,7 @@ struct configuracionMonitor{
     int numeroCanalesActivos;
     int periodoEnvioEmails;
     float razonCT;
+    char *ip_servidor_datos;
     char *id_nodo;
     char *interfazRed;
     char *rutaArchivoColumnasBDADC;

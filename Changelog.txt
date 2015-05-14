@@ -1,6 +1,10 @@
 Bitacora de cambios
 *******************
 
+[1.0.2]
+
+- Se anadio la opcion de establecer la IP
+  del servidor de almacenamiento de lecturas
 
 [1.0.1]
 

@@ -1346,6 +1346,14 @@ struct configuracionMonitor* leerArchivoConfiguracion(char *rutaArchivo){
                     }
                     else return NULL;
                 }
+                else if(strstr(linea, IP_SERVIDOR_DATOS)!= NULL){      
+                    valores = obtenerValorConfig(linea, &num);
+                    if(valores != NULL){
+                        configuracion->ip_servidor_datos = valores[0];
+                        printf("INFO: IP del servidor de almacenamiento de datos: %s.\n", configuracion->ip_servidor_datos);
+                    }
+                    else return NULL;
+                }
             }
         }
         fclose(archivo);

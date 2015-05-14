@@ -227,7 +227,7 @@ int main(int argc, char *argv[]) {
 	realizarMediciones(&listaMediciones);
 	status_puerto_DIO stp = PUERTO_OFF;//Sensor del aire principal
 	status_puerto_DIO sts = PUERTO_OFF;//Sensor del aire secundario
-        almacenarMediciones(&listaMediciones, informacion_nodo.id, configuracion->rutaArchivoColumnasBDADC, NUMERO_MEDICIONES_ADC,stp,sts);
+        //almacenarMediciones(&listaMediciones, informacion_nodo.id, configuracion->rutaArchivoColumnasBDADC, NUMERO_MEDICIONES_ADC,stp,sts);
         
 	//configuracion->valoresMinimosPermitidosMediciones, configuracion->numeroValoresMinimosPermitidos);
         sleep(configuracion->intervaloMonitoreo); //damos tiempo que sensores se activen, etc.
