@@ -169,7 +169,7 @@ int main(int argc, char *argv[]) {
     
     //Creamos un thread que va a llevar el control de los aires acondicionados.
     //La lista de mediciones debe estar ya inicializada.
-    int tAiresAcondicionados;
+    /*int tAiresAcondicionados;
 
     int res = pthread_mutex_init(&mutexTemperatura, NULL);
    
@@ -183,7 +183,7 @@ int main(int argc, char *argv[]) {
     else{
 	perror("ALERTA: No se pudo crear el mutex para el thread de monitoreo de los aires acondicionados. Saliendo...\n");
 	exit(-1);
-    }
+    }*/
 
     char *hora = obtenerHora();
     char *fecha = obtenerFecha();
@@ -227,7 +227,7 @@ int main(int argc, char *argv[]) {
 	realizarMediciones(&listaMediciones);
 	status_puerto_DIO stp = PUERTO_OFF;//Sensor del aire principal
 	status_puerto_DIO sts = PUERTO_OFF;//Sensor del aire secundario
-        //almacenarMediciones(&listaMediciones, informacion_nodo.id, configuracion->rutaArchivoColumnasBDADC, NUMERO_MEDICIONES_ADC,stp,sts);
+        almacenarMediciones(&listaMediciones, informacion_nodo.id, configuracion->rutaArchivoColumnasBDADC, NUMERO_MEDICIONES_ADC,stp,sts);
         
 	//configuracion->valoresMinimosPermitidosMediciones, configuracion->numeroValoresMinimosPermitidos);
         sleep(configuracion->intervaloMonitoreo); //damos tiempo que sensores se activen, etc.
