@@ -36,7 +36,9 @@
 #define HABILITAR_ALERTAS "habilitar-alertas"
 #define PERIODO_ENVIO_EMAILS "periodo-envio-emails"
 #define RAZON_CT "razon-transformador-ct"
-#define IP_SERVIDOR_DATOS "servidor-datos" 
+#define IP_SERVIDOR_DATOS "servidor-datos"
+#define MONITOREO_AIRES "monitoreo-aires"
+#define TEMPERATURA_CRITICA "temperatura-critica"
 
 
 //Valore predeterminados de monitoreo
@@ -59,6 +61,8 @@ struct configuracionMonitor{
     int numeroCanalesActivos;
     int periodoEnvioEmails;
     float razonCT;
+    int monitoreoAires;
+    float temperaturaCritica;
     char *ip_servidor_datos;
     char *id_nodo;
     char *interfazRed;

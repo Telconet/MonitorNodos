@@ -169,21 +169,21 @@ int main(int argc, char *argv[]) {
     
     //Creamos un thread que va a llevar el control de los aires acondicionados.
     //La lista de mediciones debe estar ya inicializada.
-    /*int tAiresAcondicionados;
-
+    int tAiresAcondicionados;
     int res = pthread_mutex_init(&mutexTemperatura, NULL);
    
-
-    if(!res){
-	tAiresAcondicionados = pthread_create(&monAiresAcondcionadosThread, NULL, (void *)monitorAiresAcondicionados, (void *) configuracion);
-	if (tAiresAcondicionados != 0) {
-	    perror("ALERTA: No se pudo crear el thread de monitoreo de los aires acondicionados. Saliendo...\n");
+    if(configuracion->monitoreoAires){
+	if(!res){
+	    tAiresAcondicionados = pthread_create(&monAiresAcondcionadosThread, NULL, (void *)monitorAiresAcondicionados, (void *) configuracion);
+	    if (tAiresAcondicionados != 0) {
+		perror("ALERTA: No se pudo crear el thread de monitoreo de los aires acondicionados. Saliendo...\n");
+	    }
+	}
+	else{
+	    perror("ALERTA: No se pudo crear el mutex para el thread de monitoreo de los aires acondicionados. Saliendo...\n");
+	    exit(-1);
 	}
     }
-    else{
-	perror("ALERTA: No se pudo crear el mutex para el thread de monitoreo de los aires acondicionados. Saliendo...\n");
-	exit(-1);
-    }*/
 
     char *hora = obtenerHora();
     char *fecha = obtenerFecha();

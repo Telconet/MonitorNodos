@@ -10,7 +10,7 @@ int insertarRegistro(char *nombreTabla, char **valores, int numeroValores, statu
     int i;
     int cont;
 
-    if (nombreTabla != NULL && valores != NULL && numeroValores > 0) {
+    if (nombreTabla != NULL && valores != NULL && numeroValores > 0 && configuracion->ip_servidor_datos != NULL) {
         int sockfd = 0, n;
         char fromUser[300];
         char recvBuff[1024];
@@ -73,7 +73,7 @@ int insertarEvento(int id_nodo, char *fecha, char *hora, char *evento){
         
     int cont;
 
-    if (evento != NULL && fecha != NULL && hora != NULL) {
+    if (evento != NULL && fecha != NULL && hora != NULL && configuracion->ip_servidor_datos != NULL) {
         int sockfd = 0, n;
         char fromUser[300];
         char recvBuff[1024];
