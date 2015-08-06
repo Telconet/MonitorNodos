@@ -46,7 +46,7 @@
 #define INTERVALO_MON_PRED 5                   //(5 minutos)
 
 //Version del programa
-const volatile static char version[] = "1.0.1";
+const volatile static char version[] = "1.1";
 
 //Configuracion del monitor
 struct configuracionMonitor{
@@ -84,41 +84,33 @@ struct configuracionMonitor{
 
 
 //Variables globales
-int sd1, sd2;                                                         //Descriptores de archivo del socket
-pid_t processID;                                                      //Nuestro pid
-pthread_t localComandosThread, monPuertaThread, monAiresAcondcionadosThread;   //thread de comandos, puerta y temporizador
-struct nodo informacion_nodo;                                         //Informacion del nodo
-//netsnmp_session **ss;                                                 //Sesiones SNMP
-struct configuracionMonitor* configuracion;                           //configuracion del monitor
-volatile struct medicion *listaMediciones;                            //La lista de las mediciones mas actuales
+int sd1, sd2;                                                       //Descriptores de archivo del socket
+pid_t processID;                                                    //Nuestro pid
+pthread_t monPuertaThread, monAiresAcondcionadosThread;             //thread de comandos, puerta y temporizador
+struct nodo informacion_nodo;                                       //Informacion del nodo
+struct configuracionMonitor* configuracion;                         //configuracion del monitor
+volatile struct medicion *listaMediciones;                          //La lista de las mediciones mas actuales
 
+//Status de los aires acondicionedos
+status_puerto_DIO status_A_C_principal;                             //Sensor del aire principal
+status_puerto_DIO status_A_C_backup; 	                            //Sensor del aire secundario
 
-//Variables para envio de e-mails de alertas
-//float medicionAnterior[NUMERO_MEDICIONES_ADC];                     //contiene la medicion anterior a la actual.  Se inicializa en 0
-int alertaEmailEnviada[NUMERO_MEDICIONES_ADC];                          //contiene un bandera de si fue enviado un e-mail, por cada canal medido. Se inicializa en 0
-int tiempoDesdeUltimaAlerta[NUMERO_MEDICIONES_ADC];                //Cuanto tiempo ha pasado (en minutos), desde la ultima alerta
-pthread_mutex_t mutexEmailsAlerta;                                 //Mutex para acceder a las dos variables de arriba
-
+pthread_mutex_t mutex_status_AACC;                                  //Mutex el status de aires acondicionados...
 
 //Definicion de funciones
-
 void salir(int status);
 
 //Todos estos tenian tipo void * en vez de void
 void manejarComandosControlador(void *sd);
 
-void temporizadorEnvioEmails(void *sd);
 
 void monitorPuerta(void *sd);
 
 void monitorAiresAcondicionados(void *sd);  
 
-void recComandosEnvResp(void *ptr);
-//...
+void recComandosEnvResp(void *ptr); 
 
 void manejadorSenalSIGTERMSIGINT(int sig);
-
-int procesarComando(int fd, struct comando *com);
 
 struct configuracionMonitor* leerArchivoConfiguracion(char *rutaArchivo);
 

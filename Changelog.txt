@@ -1,6 +1,12 @@
 Bitacora de cambios
 *******************
 
+[1.1]
+
+- Se anadio monitoreo y conmutacion de aires acondicionados
+- Se anadio opcion de temperatura critica para conmutacion de A/C
+- Limpieza de codigo innecesario
+    
 [1.0.2]
 
 - Se anadio la opcion de establecer la IP
