@@ -14,16 +14,63 @@ int main(int argc, char *argv[]) {
 
     
     //MODBUS TEST
-    /*modbus_t *my_mb_ctx;
-    int what =  conectar_modbus_serial(MODO_RS_232, 19200, COM2, 8, 'N', 1, my_mb_ctx, 10);
+    modbus_t *contexto_modbus = NULL;
+    int what =  conectar_modbus_serial(MODO_RS_232, 115200, COM2, 8, 'N', 1, &contexto_modbus, 10);
     
-    float valor = 3.843f;
+    if(what < 0 || contexto_modbus == NULL){
+	printf("Error al conectar modbus...");
+	exit(-1);
+    }
     
-    float leido = 4.5f;   			
     
-    int st = asignarRegistroInputFloat(mapeo_modbus, valor, 1,NO_SWAP);
+    /*int fd = open(COM2, O_RDWR);
     
-    if(st == -1){
+    if( fd < 0){
+	fprintf(stderr, "No se pudo abrir el puerto COM2");
+    }
+    
+    char buf[100];
+    memset(buf, 0, 100);
+    
+    snprintf(buf, 100, "Hola!\n");
+    
+    int err = write(fd, buf, 100);
+    
+    if(err < 0)
+	perror("Error en write: ");
+	
+	
+	
+    int res2 = pthread_mutex_init(&mutexModbus, NULL);
+	
+    if(res2 != 0){
+	perror("ERROR: No se pudo crear el mutex modbus. Saliendo.");
+	exit(-1);
+    }*/
+    int direccion = atoi(argv[1]);
+    printf("Direccion :%d\n", direccion);
+   
+    int tModbus = pthread_create(&hiloModbus, NULL, (void *)monitorModbus, (void *) contexto_modbus);
+
+    if (tModbus != 0) {
+	perror("ERROR: No se pudo crear el thread Modbus. Saliendo...\n");
+	exit(-1);
+    }
+    
+    //float valor = 3.843f;
+    
+    //float leido = 4.5f;   			
+    
+    //int st = asignarRegistroInputFloat(mapeo_modbus, valor, 1, NO_SWAP);
+    
+    asignarRegistroInput(mapeo_modbus, 25000, direccion);
+    
+    printf("0x%X\n", mapeo_modbus->tab_input_registers[direccion]);
+    
+    
+    
+        
+    /*if(st == -1){
 	printf(" Error modbus\n");
     }
     
@@ -31,14 +78,18 @@ int main(int argc, char *argv[]) {
     leerRegistroInputFloat(mapeo_modbus, 1, &leido, NO_SWAP);
     
     printf("Leido (hex) 0x%X\n", *(unsigned int*)&leido);
-    printf("Leido (float): %f\n", leido);
+    printf("Leido (float): %f\n", leido);*/
     
-    exit(-1);*/
+    while(1){
+	sleep(1);
+    }
+    
+    exit(-1);
     
     //***********
 
     //cambiemos el directorio de trabajo
-    chdir(DIRECTORIO_DE_TRABAJO);
+    /*chdir(DIRECTORIO_DE_TRABAJO);
 
     //Configuramos los signal handlers, para manejar Ctrl-C
     signal(SIGINT, manejadorSenalSIGTERMSIGINT);
@@ -131,12 +182,7 @@ int main(int argc, char *argv[]) {
         perror("ALERTA: No se pudo crear el thread de monitoreo de la puerta de acceso. Saliendo...\n");
     }
 
-    //Ya que no tenemos un RTC, actualizamos la fecha silenciosamente
-    /*if (system("ntpdate -s -h ntp.telconet.net")) {
-        printf("ERROR: No se pudo actualizar la fecha.\n");
-    } else {
-        printf("INFO: Se ha actualizado la fecha correctamente.\n");
-    }*/
+
 
     printf("INFO: Direccion IP del monitor de nodo: %s\n", informacion_nodo.ip);
 
@@ -192,7 +238,7 @@ int main(int argc, char *argv[]) {
 	}
        
        
-	int tModbus = pthread_create(&monPuertaThread, NULL, (void *)monitorModbus, (void *) contexto_modbus);
+	int tModbus = pthread_create(&hiloModbus, NULL, (void *)monitorModbus, (void *) contexto_modbus);
     
 	if (tModbus != 0) {
 	    perror("ERROR: No se pudo crear el thread Modbus. Saliendo...\n");
@@ -213,30 +259,6 @@ int main(int argc, char *argv[]) {
     free(hora);
 
 
-    //*********PRUEBA ADC
-    /*
-        uint16_t* data_canal_2 = NULL;
-        uint16_t* data_canal_1 = NULL;
-        int noMuestras = NUMERO_MUESTRAS;
-        int canal = 0;
-        float voltaje1 = 0.0f;
-        float voltaje2 = 0.0f;
-        
-        int tamanoBuffers = sizeof(uint16_t)*noMuestras;
-        data_canal_1 = malloc(tamanoBuffers);
-        data_canal_2 = malloc(tamanoBuffers);
-     */
-    //********PRUEBA ADC
-    //canal = 20;         //-->quitar
-    //Empezamos el monitoreo
-    //float temperaturaHumedad = 0.0f;
-    /*Vamos a hacer que el programa de monitoreo corra cada 14.675 minutos aproximadamente. Por esta razón podemos observar
-    que en el lazo while se encuentra una comparación < (60 * 13) que indica 60 segundos multipicado por 13 minutos
-    pero estos trece minutos no son 13 minutos exactos son los 14.675 minutos mencionados anteriormente. Para esto
-    usamos las variables inicio, fin y descanso, y también la función clock que nos cuenta el número de pulsos del reloj interno
-    por segundo. Luego de los 14.675 minutos, programamos el crontab de tal forma que cada 15 minutos vuelva levantar
-    el daemon de monitoreo.
-    */
     
     while (1){
 	realizarMediciones(&listaMediciones);
@@ -253,7 +275,7 @@ int main(int argc, char *argv[]) {
         sleep(configuracion->intervaloMonitoreo); //damos tiempo que sensores se activen, etc.
 	
         
-    }
+    }*/
 
     return 0;
 }

@@ -409,26 +409,40 @@ void monitorModbus(void *sd){
     //Empezamos a oir el puerto serio. Para este instante ya debemos tener
     //el contexto y mapa de registros listo.
     while(true){
-        
+        perror("Esperando por solicitudes...\n");
         memset(solicitud, 0, MODBUS_TCP_MAX_ADU_LENGTH);
         
         int rc = modbus_receive(contexto_modbus, solicitud);                //esperamos comunicaci'on
         
-        pthread_mutex_lock(&mutexModbus);
+        printf("rc: %d\n",rc);
         
-        int i = 0;
-        char buffer[2*MODBUS_TCP_MAX_ADU_LENGTH + 1];
-        memset(buffer, 0, 2*MODBUS_TCP_MAX_ADU_LENGTH + 1);
+        if(rc > 0){
+             pthread_mutex_lock(&mutexModbus);
         
-        for(i=0 ; i < MODBUS_TCP_MAX_ADU_LENGTH; i++){
-            sprintf(buffer,"%02X", solicitud[i]);              //para mostrar contenido de la solicitud
+            int i = 0;
+            char buffer[2*MODBUS_TCP_MAX_ADU_LENGTH + 1];
+            memset(buffer, 0, 2*MODBUS_TCP_MAX_ADU_LENGTH + 1);
+            
+            printf("Solicitud: ");
+            for(i=0 ; i < rc; i++){
+                printf("%02X", solicitud[i]);
+            }
+            printf("\n");
+
+            printf("INFO: Respondiendo solicitud MODBUS... %s\n", buffer);
+            int err = modbus_reply(contexto_modbus, solicitud, rc, mapeo_modbus);    //MODBUS responde a la solicitud
+            printf("err = %d\n",err);
+            if(err < 0)
+                perror("Error al responder solicitud");
+            
+            pthread_mutex_unlock(&mutexModbus);
         }
-        
-        printf("IFNO: Respondiendo solicitud MODBUS... %s\n", buffer);
-        modbus_reply(contexto_modbus, solicitud, rc, mapeo_modbus);    //MODBUS responde a la solicitud
-        
-        pthread_mutex_unlock(&mutexModbus);
-        
+        else{
+            modbus_close(contexto_modbus);
+            perror("Error al recibir solicitud modbus.\n");
+            modbus_connect(contexto_modbus);        //si hay error, reconectamos..
+
+        }
     }
 }
         

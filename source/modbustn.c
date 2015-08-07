@@ -1,6 +1,8 @@
 #include "modbustn.h"
 
-
+/**
+ * Para RS-232 el unico baudrate disponible es 115200
+ */
 int configurar_puerto_serial(int modo_puerto, int baudrate, char paridad, int stop_bits, int data_bits){
     
     //En reset, el puerto COM2 se configura como RS-232 por defecto.
@@ -94,9 +96,16 @@ int conectar_modbus_serial(int modo_puerto, int baudrate, char *tty, int data_bi
     
     *contexto = modbus_new_rtu(tty, baudrate, paridad, data_bits, stop_bits);
     
+    if(*contexto == NULL){
+        fprintf(stderr, "Error al crear el contexto modbus\n");
+        return -1;
+    }
     
     //Establecer nuestra id de esclavo
-    modbus_set_slave(*contexto, id_esclavo);
+    int err = modbus_set_slave(*contexto, id_esclavo);
+    
+    if(err < 0)
+        perror("Error al establecer ID del esclavo");
 
     //El siguiente mapping sera usado.
     
