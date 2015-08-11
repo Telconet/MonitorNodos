@@ -46,14 +46,14 @@
     //V DC 4                   11                       40029 - 40030
     //Humedad                  15                       40031 - 40032
     
-#define COIL_RELE_0         1
-#define COIL_RELE_1         2
-#define COIL_RELE_2         3
-#define COIL_RELE_3         4
+#define COIL_RELE_0         0
+#define COIL_RELE_1         1
+#define COIL_RELE_2         2
+#define COIL_RELE_3         3
 
-#define INPUT_BIT_PUERTA             1
-#define INPUT_BIT_COMBUSTIBLE        2
-#define INPUT_BIT_GENERADOR          3
+#define INPUT_BIT_PUERTA             0
+#define INPUT_BIT_COMBUSTIBLE        1
+#define INPUT_BIT_GENERADOR          2
 
 #define REGISTRO_INPUT_I_DC_1        1
 #define REGISTRO_INPUT_I_DC_2        3

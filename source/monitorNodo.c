@@ -11,6 +11,8 @@ int activarPuerto(puerto_DIO puerto_DIO_0);
  *Programa principal
  */
 int main(int argc, char *argv[]) {
+    
+    
 
     
     //MODBUS TEST
@@ -47,8 +49,8 @@ int main(int argc, char *argv[]) {
 	perror("ERROR: No se pudo crear el mutex modbus. Saliendo.");
 	exit(-1);
     }*/
-    int direccion = atoi(argv[1]);
-    printf("Direccion :%d\n", direccion);
+    /*int direccion = atoi(argv[1]);
+    printf("Direccion :%d\n", direccion);*/
    
     int tModbus = pthread_create(&hiloModbus, NULL, (void *)monitorModbus, (void *) contexto_modbus);
 
@@ -62,10 +64,64 @@ int main(int argc, char *argv[]) {
     //float leido = 4.5f;   			
     
     //int st = asignarRegistroInputFloat(mapeo_modbus, valor, 1, NO_SWAP);
+    uint16_t i = 0;
+    int bit = 0;
+    while(true){
+	
+	if(bit == 0){
+	    
+	    printf("fuck\n");
+	    if(asignarBit(mapeo_modbus, OFF,0) < 0){
+		printf("error al cambiar bit...\n");
+	    }
+	    asignarBit(mapeo_modbus, OFF,1);
+	    asignarBit(mapeo_modbus, OFF,2);
+	    asignarBit(mapeo_modbus, OFF,3);
+	    asignarInputBit(mapeo_modbus, OFF, 0);
+	    asignarInputBit(mapeo_modbus, OFF, 1);
+	    asignarInputBit(mapeo_modbus, OFF, 2);
+	    bit = 1;
+	    printf(" what\n");
+	}
+	else{
+	    asignarBit(mapeo_modbus, ON,0);
+	    asignarBit(mapeo_modbus, ON,1);
+	    asignarBit(mapeo_modbus, ON,2);
+	    asignarBit(mapeo_modbus, ON,3);
+	    asignarInputBit(mapeo_modbus, ON, 0);
+	    asignarInputBit(mapeo_modbus, ON, 1);
+	    asignarInputBit(mapeo_modbus, ON, 2);
+	    bit = 0;
+	    printf("not\n");
+	}
+	
+	printf("Input regs...\n");
+	
+	asignarRegistroInputFloat(mapeo_modbus, 2565.3, 0, 1);
+	asignarRegistroInput(mapeo_modbus, i + 2, 2);
+	asignarRegistroInput(mapeo_modbus, i + 3, 3);
+	asignarRegistroInput(mapeo_modbus, i + 4, 4);
+	asignarRegistroInput(mapeo_modbus, i + 3, 5);
+	asignarRegistroInput(mapeo_modbus, i + 5, 6);
+	asignarRegistroInput(mapeo_modbus, i + 6, 7);
+	asignarRegistroInput(mapeo_modbus, i + 7, 8);
+	asignarRegistroInput(mapeo_modbus, i + 8, 9);
+	asignarRegistroInput(mapeo_modbus, i + 9, 10);
+	asignarRegistroInput(mapeo_modbus, i + 10, 11);
+	asignarRegistroInput(mapeo_modbus, i + 11, 12);
+	asignarRegistroInput(mapeo_modbus, i + 12, 13);
+	asignarRegistroInput(mapeo_modbus, i + 13, 14);
+	asignarRegistroInput(mapeo_modbus, i + 14, 15);
+	asignarRegistroInput(mapeo_modbus, i + 15, 16);
     
-    asignarRegistroInput(mapeo_modbus, 25000, direccion);
+	i++;
+	printf("wow\n");
+	
+	sleep(2);
+    }
     
-    printf("0x%X\n", mapeo_modbus->tab_input_registers[direccion]);
+    
+    //printf("0x%X\n", mapeo_modbus->tab_input_registers[direccion]);
     
     
     

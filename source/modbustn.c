@@ -183,7 +183,7 @@ int asignarBit(modbus_mapping_t *mapeo, uint8_t valor, int direccion){
         return -1;                  //estamos tratando de asignar un registro que no existe
     }
     
-    if(valor != ON || valor != OFF){
+    if(!(valor == ON || valor == OFF)){
         return -1;                  //Solo permitimos valores ON u OFF
     }
     
@@ -219,7 +219,7 @@ int asignarInputBit(modbus_mapping_t *mapeo, uint8_t valor, int direccion){
         return -1;                  //estamos tratando de asignar un registro que no existe
     }
     
-    if(valor != ON || valor != OFF){
+    if(!(valor == ON || valor == OFF)){
         return -1;                  //Solo permitimos valores ON u OFF
     }
     
@@ -317,7 +317,6 @@ int asignarRegistroFloat(modbus_mapping_t *mapeo, float valor, int direccion, in
     }
     
     if(direccion + 1 > mapeo->nb_registers - 1){
-        printf("what");
         return -1;                  //No hay registros suficientes para almacenar el valor de 32 bits
     }
     
@@ -395,7 +394,8 @@ int asignarRegistroInputFloat(modbus_mapping_t *mapeo, float valor, int direccio
     unsigned char valor_mem[4] = {0};         //32 bitss
     
     memcpy(valor_mem, &copia_valor, 4);                                        //obtenemos los bits en memoria (nos saltamos los castings hechos por C)
-    //printf("valor 0x%X, %f\n", *(unsigned int*)valor, *valor);          //Si no se hace asi, float es promocianado a DOUBLE! (para hex representation)
+    
+    //printf("valor 0x%X, %f\n", *(unsigned int *)valor_mem, copia_valor);          //Si no se hace asi, float es promocianado a DOUBLE! (para hex representation)
     
     unsigned int upper_byte =  0;
     unsigned int lower_byte =  0;
