@@ -17,7 +17,7 @@ int main(int argc, char *argv[]) {
     
     //MODBUS TEST
     modbus_t *contexto_modbus = NULL;
-    int what =  conectar_modbus_serial(MODO_RS_232, 115200, COM2, 8, 'N', 1, &contexto_modbus, 10);
+    int what =  conectar_modbus_serial(MODO_RS_485_HD, 115200, COM2, 8, 'N', 1, &contexto_modbus, 10);
     
     if(what < 0 || contexto_modbus == NULL){
 	printf("Error al conectar modbus...");
@@ -25,7 +25,7 @@ int main(int argc, char *argv[]) {
     }
     
     
-    /*int fd = open(COM2, O_RDWR);
+    int fd = open(COM2, O_RDWR);
     
     if( fd < 0){
 	fprintf(stderr, "No se pudo abrir el puerto COM2");
@@ -48,22 +48,17 @@ int main(int argc, char *argv[]) {
     if(res2 != 0){
 	perror("ERROR: No se pudo crear el mutex modbus. Saliendo.");
 	exit(-1);
-    }*/
+    }
     /*int direccion = atoi(argv[1]);
     printf("Direccion :%d\n", direccion);*/
    
-    int tModbus = pthread_create(&hiloModbus, NULL, (void *)monitorModbus, (void *) contexto_modbus);
+    /*int tModbus = pthread_create(&hiloModbus, NULL, (void *)monitorModbus, (void *) contexto_modbus);
 
     if (tModbus != 0) {
 	perror("ERROR: No se pudo crear el thread Modbus. Saliendo...\n");
 	exit(-1);
     }
     
-    //float valor = 3.843f;
-    
-    //float leido = 4.5f;   			
-    
-    //int st = asignarRegistroInputFloat(mapeo_modbus, valor, 1, NO_SWAP);
     uint16_t i = 0;
     int bit = 0;
     while(true){
@@ -118,7 +113,7 @@ int main(int argc, char *argv[]) {
 	printf("wow\n");
 	
 	sleep(2);
-    }
+    }*/
     
     
     //printf("0x%X\n", mapeo_modbus->tab_input_registers[direccion]);

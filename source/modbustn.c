@@ -1,5 +1,6 @@
 #include "modbustn.h"
 
+
 /**
  * Para RS-232 el unico baudrate disponible es 115200
  */
@@ -14,6 +15,21 @@ int configurar_puerto_serial(int modo_puerto, int baudrate, char paridad, int st
         printf("ERROR: no se pudo abrir la region de memoria para configurar COM2\n");
         return -1;
     }
+    
+     //Mapeamos la region de memoria para configurar el modo del puerto...COM2 Mode Register
+    unsigned char *RS485_SUPPORT_REGISTER = mmap(0, getpagesize(), PROT_READ|PROT_WRITE, MAP_SHARED, fd_com2, 0x22400000);
+        
+    if(RS485_SUPPORT_REGISTER == MAP_FAILED ){
+        printf("ERROR: no se pudo abrir la region de memoria para configurar COM2\n");
+        return -1;
+    }
+    
+    if(!((*RS485_SUPPORT_REGISTER) & 0x00000001)){
+        printf("ERROR: Tarjeta no tiene instalada la opcion RS-485\n");
+        munmap((void *)RS485_SUPPORT_REGISTER, getpagesize());
+        return -1;
+    }
+    
     
     //Mapeamos la region de memoria para configurar el modo del puerto...COM2 Mode Register
     unsigned char *COM2_MODE_REGISTER = mmap(0, getpagesize(), PROT_READ|PROT_WRITE, MAP_SHARED, fd_com2, 0x22C00000);
@@ -54,9 +70,9 @@ int configurar_puerto_serial(int modo_puerto, int baudrate, char paridad, int st
                 return -1;
             }
             
-            if((data_bits == 8 && paridad != 'N') || (data_bits == 8 && stop_bits == 2)){
-                *COM2_FORMAT = 0x01;
-            }
+            //if((data_bits == 8 && paridad != 'N') || (data_bits == 8 && stop_bits == 2)){
+                *COM2_FORMAT = 0x00; //0x01;
+            //}
             
             break;
         case MODO_RS_485_FD:
@@ -66,11 +82,13 @@ int configurar_puerto_serial(int modo_puerto, int baudrate, char paridad, int st
             printf("ERROR: modo de puerto serial invalido\n");
             munmap((void *)COM2_MODE_REGISTER, getpagesize());
             munmap((void *)COM2_FORMAT, getpagesize());
+            munmap((void *)RS485_SUPPORT_REGISTER, getpagesize());
             return -1;
     }
     
     munmap((void *)COM2_MODE_REGISTER, getpagesize());
     munmap((void *)COM2_FORMAT, getpagesize());
+    munmap((void *)RS485_SUPPORT_REGISTER, getpagesize());
     
     close(fd_com2);
     
