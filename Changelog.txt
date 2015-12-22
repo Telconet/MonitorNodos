@@ -1,7 +1,11 @@
 Bitacora de cambios
 *******************
 
-[1.1]
+[1.1.1]
+
+ - Se anadio eleccion de puerto DIO para A/C principal y backup
+
+[1.1.0]
 
 - Se anadio monitoreo y conmutacion de aires acondicionados
 - Se anadio opcion de temperatura critica para conmutacion de A/C

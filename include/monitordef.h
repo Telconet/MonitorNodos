@@ -39,6 +39,8 @@
 #define IP_SERVIDOR_DATOS "servidor-datos"
 #define MONITOREO_AIRES "monitoreo-aires"
 #define TEMPERATURA_CRITICA "temperatura-critica"
+#define PUERTO_DIO_AC_PRINCIPAL "puerto-dio-ac-principal"
+#define PUERTO_DIO_AC_BACKUP "puerto-dio-ac-backup"
 
 
 //Valore predeterminados de monitoreo
@@ -62,6 +64,8 @@ struct configuracionMonitor{
     int periodoEnvioEmails;
     float razonCT;
     int monitoreoAires;
+    int puertoDIO_ACPrincipal;
+    int puertoDIO_ACBackup;
     float temperaturaCritica;
     char *ip_servidor_datos;
     char *id_nodo;

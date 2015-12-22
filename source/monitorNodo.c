@@ -73,6 +73,7 @@ int main(int argc, char *argv[]) {
     }
 
     printf("INFO: Direccion IP del monitor de nodo: %s\n", informacion_nodo.ip);
+    printf("INFO: IP del servidor de datos: %s\n", configuracion->ip_servidor_datos);
 
     //Creamos la lista de mediciones 
     listaMediciones = inicializarListaMediciones(NUMERO_MEDICIONES_ADC);

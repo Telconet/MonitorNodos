@@ -150,9 +150,9 @@ void monitorAiresAcondicionados(void *sd){
     
     
     //Encendemos el aire principal y apagamos el backup (DIO_0 es principal, DIO_1 es backup)
-    activarPuerto(puerto_DIO_0);
-    desactivarPuerto(puerto_DIO_1);
-    
+                                                        //(o DIO_2 principal, DIO_3 backup)
+    activarPuerto(configuracion->puertoDIO_ACPrincipal);    //Principal
+    desactivarPuerto(configuracion->puertoDIO_ACBackup); //Backup
     sleep(2);
     
     //Medimos el sensor del AC Pinr  
@@ -172,7 +172,6 @@ void monitorAiresAcondicionados(void *sd){
     //Hacemos una primera medicion, para saber el status real de la puerta
     //Principal
     if(sensorAACCPrincipal == PUERTO_OFF){        
-        //La puerta esta cerrada
         aaCCPrincipalUltMed = APAGADO;
         printf("INFO: Aire acondicionado principal apagado.\n");
         insertarEvento(atoi(configuracion->id_nodo), fecha, hora, "Aire acondicionado principal apagado");     
@@ -222,7 +221,7 @@ void monitorAiresAcondicionados(void *sd){
         temperatura = medicionTemperatura_ptr->valor;
         pthread_mutex_unlock(&mutexTemperatura);
         
-        //printf("Temp: %.2f\n", temperatura);
+        printf("Temp: %.2f\n", temperatura);
         
 	if (temperatura > conf->temperaturaCritica){
             
@@ -230,8 +229,8 @@ void monitorAiresAcondicionados(void *sd){
             fecha = obtenerFecha();
             
             //Conmutamos
-	    activarPuerto(puerto_DIO_1);   //Activar el AACC backup
-            desactivarPuerto(puerto_DIO_0);   //Apagamos el principal
+	    activarPuerto(configuracion->puertoDIO_ACBackup);   //Activar el AACC backup 
+            desactivarPuerto(configuracion->puertoDIO_ACPrincipal);   //Apagamos el principal   
             
             sleep(3);       //dar tiempo a reles para conmutar.
             
@@ -567,6 +566,38 @@ struct configuracionMonitor* leerArchivoConfiguracion(char *rutaArchivo){
                     if(valores != NULL){
                         configuracion->temperaturaCritica = atof(valores[0]);
                         printf("INFO: Temperatura critica: %.0f C.\n", configuracion->temperaturaCritica);
+                    }
+                    else return NULL;
+                }
+                else if(strstr(linea, PUERTO_DIO_AC_PRINCIPAL) != NULL){
+                    //DIO AC Princiapl
+                    valores = obtenerValorConfig(linea, &num);
+                    if(valores != NULL){
+                        int puerto = atoi(valores[0]);
+                          
+                        if(puerto == 0 || puerto > 3){
+                            configuracion->puertoDIO_ACPrincipal = puerto_DIO_0;    //valor predeterminado
+                        }
+                        else{
+                            configuracion->puertoDIO_ACPrincipal = puerto;    //valor predeterminado
+                        }
+                        printf("INFO: Puerto DIO del A/C principal: %d\n", configuracion->puertoDIO_ACPrincipal);
+                    }
+                    else return NULL;
+                }
+                else if(strstr(linea, PUERTO_DIO_AC_BACKUP) != NULL){
+                    //DIO AC backup
+                    valores = obtenerValorConfig(linea, &num);
+                    if(valores != NULL){
+                        int puerto = atoi(valores[0]);
+                          
+                        if(puerto == 0 || puerto > 3){
+                            configuracion->puertoDIO_ACBackup = puerto_DIO_1;    //valor predeterminado
+                        }
+                        else{
+                            configuracion->puertoDIO_ACBackup = puerto;    //valor predeterminado
+                        }
+                        printf("INFO: Puerto DIO del A/C backup: %d\n", configuracion->puertoDIO_ACBackup);
                     }
                     else return NULL;
                 }

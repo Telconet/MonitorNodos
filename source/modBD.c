@@ -43,7 +43,40 @@ int insertarRegistro(char *nombreTabla, char **valores, int numeroValores, statu
         }
 
         cont = 0;
-        while ((n = read(sockfd, recvBuff, sizeof (recvBuff) - 1)) > 0) {
+        while (1) {
+            
+            int status = system("date > /tmp/log_recv");
+            printf("system() status: %d", status);
+            fflush( stdout );
+            n = read(sockfd, recvBuff, sizeof(recvBuff) - 1);
+            system("date >> /tmp/log_recv");
+            
+            if(n <= 0){
+                //Coneccion cerrada.
+                break;
+            }
+            else{
+            
+                recvBuff[n - 1] = '\0';
+                if(strcmp(recvBuff, "Inicio")==0){
+                    system("date > /tmp/log_write1");
+                    write(sockfd, fromUser, strlen(fromUser));
+                    system("date >> /tmp/log_write1");
+                }else if(strcmp(recvBuff, "OK")==0){
+                    break;
+                }else{
+                    cont++;
+                    if(cont>3){
+                        break;
+                    }else{
+                        system("date > /tmp/log_write2");
+                        write(sockfd, fromUser, strlen(fromUser));
+                        system("date >> /tmp/log_write2");
+                    }
+                }
+            }
+        }
+        /*while ((n = read(sockfd, recvBuff, sizeof (recvBuff) - 1)) > 0) {
             recvBuff[n - 1] = '\0';
             printf("\nRcv: '%s'", recvBuff);
             if(strcmp(recvBuff, "Inicio")==0){
@@ -59,7 +92,7 @@ int insertarRegistro(char *nombreTabla, char **valores, int numeroValores, statu
                     write(sockfd, fromUser, strlen(fromUser));
                 }
             }
-        }
+        }*/
 
         close(sockfd);
         return 0;
