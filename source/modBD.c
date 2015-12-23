@@ -45,11 +45,11 @@ int insertarRegistro(char *nombreTabla, char **valores, int numeroValores, statu
         cont = 0;
         while (1) {
             
-            int status = system("date > /tmp/log_recv");
-            printf("system() status: %d", status);
-            fflush( stdout );
+            //int status = system("date > /tmp/log_recv");
+            //printf("system() status: %d", status);
+            //fflush( stdout );
             n = read(sockfd, recvBuff, sizeof(recvBuff) - 1);
-            system("date >> /tmp/log_recv");
+            //system("date >> /tmp/log_recv");
             
             if(n <= 0){
                 //Coneccion cerrada.
@@ -59,9 +59,9 @@ int insertarRegistro(char *nombreTabla, char **valores, int numeroValores, statu
             
                 recvBuff[n - 1] = '\0';
                 if(strcmp(recvBuff, "Inicio")==0){
-                    system("date > /tmp/log_write1");
+                    //system("date > /tmp/log_write1");
                     write(sockfd, fromUser, strlen(fromUser));
-                    system("date >> /tmp/log_write1");
+                    //system("date >> /tmp/log_write1");
                 }else if(strcmp(recvBuff, "OK")==0){
                     break;
                 }else{
@@ -69,9 +69,9 @@ int insertarRegistro(char *nombreTabla, char **valores, int numeroValores, statu
                     if(cont>3){
                         break;
                     }else{
-                        system("date > /tmp/log_write2");
+                        //system("date > /tmp/log_write2");
                         write(sockfd, fromUser, strlen(fromUser));
-                        system("date >> /tmp/log_write2");
+                        //system("date >> /tmp/log_write2");
                     }
                 }
             }
