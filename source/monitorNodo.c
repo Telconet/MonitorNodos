@@ -2,6 +2,15 @@
 #include "mediciones.h"
 #include "DIO.h"
 
+#include <unistd.h>     // UNIX standard function definitions
+#include <fcntl.h>      // File control definitions
+#include <termios.h>    // POSIX terminal control definitions
+
+
+//Para Rs485 HD
+
+
+
 //typedef enum {UNO,DOS,TRES,CUATRO} estados;
 //estados estado = UNO;
 int activarPuerto(puerto_DIO puerto_DIO_0);
@@ -17,7 +26,10 @@ int main(int argc, char *argv[]) {
     
     //MODBUS TEST
     modbus_t *contexto_modbus = NULL;
-    int what =  conectar_modbus_serial(MODO_RS_485_HD, 115200, COM2, 8, 'N', 1, &contexto_modbus, 10);
+    
+    printf("Baud rate: %d\n", atoi(argv[2]));
+    
+    int what =  conectar_modbus_serial(MODO_RS_485_FD, atoi(argv[2]), COM2, 8, 'N', 1, &contexto_modbus, 10);
     
     if(what < 0 || contexto_modbus == NULL){
 	printf("Error al conectar modbus...");
@@ -27,6 +39,13 @@ int main(int argc, char *argv[]) {
     
     int fd = open(COM2, O_RDWR);
     
+    
+    int mcr = AUTO485FD;
+    if( ioctl(fd, TIOC_SBCS485, &mcr) < 0){
+	perror("error de ioctl\n");
+    }
+    
+
     if( fd < 0){
 	fprintf(stderr, "No se pudo abrir el puerto COM2");
     }
@@ -34,25 +53,19 @@ int main(int argc, char *argv[]) {
     char buf[100];
     memset(buf, 0, 100);
     
-    snprintf(buf, 100, "Hola!\n");
-    
-    int err = write(fd, buf, 100);
-    
-    if(err < 0)
-	perror("Error en write: ");
+
 	
 	
-	
-    int res2 = pthread_mutex_init(&mutexModbus, NULL);
+    /*int res2 = pthread_mutex_init(&mutexModbus, NULL);
 	
     if(res2 != 0){
 	perror("ERROR: No se pudo crear el mutex modbus. Saliendo.");
 	exit(-1);
     }
-    /*int direccion = atoi(argv[1]);
-    printf("Direccion :%d\n", direccion);*/
+    int direccion = 10; //atoi(argv[1]);
+    printf("Direccion :%d\n", direccion);
    
-    /*int tModbus = pthread_create(&hiloModbus, NULL, (void *)monitorModbus, (void *) contexto_modbus);
+    int tModbus = pthread_create(&hiloModbus, NULL, (void *)monitorModbus, (void *) contexto_modbus);
 
     if (tModbus != 0) {
 	perror("ERROR: No se pudo crear el thread Modbus. Saliendo...\n");
@@ -115,12 +128,11 @@ int main(int argc, char *argv[]) {
 	sleep(2);
     }*/
     
-    
     //printf("0x%X\n", mapeo_modbus->tab_input_registers[direccion]);
     
     
     
-        
+       
     /*if(st == -1){
 	printf(" Error modbus\n");
     }
@@ -132,8 +144,20 @@ int main(int argc, char *argv[]) {
     printf("Leido (float): %f\n", leido);*/
     
     while(1){
+	
+	memset(buf, 0, 100);
+	snprintf(buf, 100, "Hola Mundo\n");
+	
+	printf("%s\n", buf);
+    
+	int err = write(fd, buf, strlen(buf));
+	
+	if(err < 0)
+	    perror("Error en write: ");
 	sleep(1);
     }
+    
+    close(fd);
     
     exit(-1);
     

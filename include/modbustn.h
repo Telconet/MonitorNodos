@@ -5,6 +5,7 @@
 //#include <modbus.h>
 
 
+
 #define MODO_RS_232             1
 #define MODO_RS_485_HD          2
 #define MODO_RS_485_FD          3
@@ -13,6 +14,9 @@
 
 #define SWAP    1
 #define NO_SWAP 0
+
+
+
 
 
 

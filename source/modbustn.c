@@ -16,7 +16,7 @@ int configurar_puerto_serial(int modo_puerto, int baudrate, char paridad, int st
         return -1;
     }
     
-     //Mapeamos la region de memoria para configurar el modo del puerto...COM2 Mode Register
+     //Mapeamos la region de memoria para configurar el modo del puerto...COM2 Support Register
     unsigned char *RS485_SUPPORT_REGISTER = mmap(0, getpagesize(), PROT_READ|PROT_WRITE, MAP_SHARED, fd_com2, 0x22400000);
         
     if(RS485_SUPPORT_REGISTER == MAP_FAILED ){
@@ -24,10 +24,13 @@ int configurar_puerto_serial(int modo_puerto, int baudrate, char paridad, int st
         return -1;
     }
     
-    if(!((*RS485_SUPPORT_REGISTER) & 0x00000001)){
-        printf("ERROR: Tarjeta no tiene instalada la opcion RS-485\n");
-        munmap((void *)RS485_SUPPORT_REGISTER, getpagesize());
-        return -1;
+    if(modo_puerto == MODO_RS_485_FD || modo_puerto == MODO_RS_485_HD){
+    
+        if(!((*RS485_SUPPORT_REGISTER) & 0x00000002)){      //check bit 1?
+            printf("ERROR: Tarjeta no tiene instalada la opcion RS-485\n");
+            munmap((void *)RS485_SUPPORT_REGISTER, getpagesize());
+            return -1;
+        }
     }
     
     
@@ -70,13 +73,18 @@ int configurar_puerto_serial(int modo_puerto, int baudrate, char paridad, int st
                 return -1;
             }
             
-            //if((data_bits == 8 && paridad != 'N') || (data_bits == 8 && stop_bits == 2)){
-                *COM2_FORMAT = 0x00; //0x01;
-            //}
+            if((data_bits == 8 && paridad != 'N') || (data_bits == 8 && stop_bits == 2)){
+                *COM2_FORMAT = 0x01;
+            }
+            else{
+                *COM2_FORMAT = 0x00;
+            }
+
             
             break;
         case MODO_RS_485_FD:
             *COM2_MODE_REGISTER = 0x01;
+            *COM2_FORMAT = 0x00;
             break;
         default:
             printf("ERROR: modo de puerto serial invalido\n");
@@ -118,6 +126,9 @@ int conectar_modbus_serial(int modo_puerto, int baudrate, char *tty, int data_bi
         fprintf(stderr, "Error al crear el contexto modbus\n");
         return -1;
     }
+    
+    //
+   
     
     //Establecer nuestra id de esclavo
     int err = modbus_set_slave(*contexto, id_esclavo);
@@ -164,11 +175,37 @@ int conectar_modbus_serial(int modo_puerto, int baudrate, char *tty, int data_bi
     }
     
     //Iniciamos la conexion serial
-    if(modbus_connect(*contexto) == -1){
+    /*if(modbus_connect(*contexto) == -1){
         printf("ERROR: No se pudo iniciar la comunicacion modbus serial\n");
         modbus_free(*contexto);
         return -1;
     }
+    
+    
+    //Aqui cambiamos los parametros seriales (si usamos modo RS-485), para activar el Half Duplex Automatico.
+    int mcr = -1;
+    int fd  = modbus_get_socket(*contexto);
+    
+    mcr = AUTO485HD;
+    ioctl(fd, TIOC_SBCS485, &mcr);
+    
+    printf("fd serial (conectar modbus serial): %d\n", fd);
+    
+    if(modo_puerto == MODO_RS_485_HD){
+        mcr = AUTO485HD;
+        if( ioctl(fd, TIOC_SBCS485, &mcr) < 0){
+            perror("error de ioctl\n");
+            return -1;
+        }
+    }
+    else if(modo_puerto == MODO_RS_485_FD){
+        mcr = AUTO485FD;
+        printf("Modo RS485 FULL DUPLEX\n");
+        if( ioctl(fd, TIOC_SBCS485, &mcr) < 0){
+            perror("error de ioctl\n");
+            return -1;
+        }
+    }*/
     
     
     //printf("contectar_modbus_serial context pointer... %p\n", *contexto);

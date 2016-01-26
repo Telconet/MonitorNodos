@@ -400,7 +400,8 @@ void monitorModbus(void *sd){
     modbus_t *contexto_modbus = (modbus_t *)sd;
     
     if(sd == NULL){
-        printf("out!\n");
+        perror("ERROR: No se recibio el contexto modbus. Se deshabilito MODBUS.\n");
+        pthread_exit((void *)-1);
     }
     
     //Solicitud recibida
@@ -441,6 +442,14 @@ void monitorModbus(void *sd){
             modbus_close(contexto_modbus);
             perror("Error al recibir solicitud modbus.\n");
             modbus_connect(contexto_modbus);        //si hay error, reconectamos..
+            
+            //Setear nuevamente para RS485 HD o FD..
+            //TODO...
+            
+            /*int fd  = modbus_get_socket(contexto_modbus);
+    
+            int mcr = AUTO485HD;
+            ioctl(fd, TIOC_SBCS485, &mcr);*/
 
         }
     }
