@@ -11,9 +11,10 @@ int insertarRegistro(char *nombreTabla, char **valores, int numeroValores, statu
     int cont;
 
     if (nombreTabla != NULL && valores != NULL && numeroValores > 0 && configuracion->ip_servidor_datos != NULL) {
-        int sockfd = 0, n;
+        int sockfd = 0;
         char fromUser[300];
-        char recvBuff[1024];
+        
+        memset(fromUser, 0, 300);
 
         struct sockaddr_in serv_addr;
         int conn;
@@ -32,7 +33,7 @@ int insertarRegistro(char *nombreTabla, char **valores, int numeroValores, statu
         //printf("\nQuery: '%s'->%d\n", fromUser, strlen(fromUser));
 
         serv_addr.sin_family = AF_INET;
-        serv_addr.sin_port = htons(5000);
+        serv_addr.sin_port = htons(6000);
         serv_addr.sin_addr.s_addr = inet_addr(configuracion->ip_servidor_datos);       //172.40.0.10
 
         conn = connect(sockfd, (struct sockaddr *) &serv_addr, sizeof (serv_addr));
@@ -43,7 +44,23 @@ int insertarRegistro(char *nombreTabla, char **valores, int numeroValores, statu
         }
 
         cont = 0;
-        while (1) {
+        
+        while(cont < 3){                                                //Maximo 3 reintentos
+            
+            int status = write(sockfd, fromUser, strlen(fromUser));     //Enviamos los datos de mediciones
+            
+            if(status < 0){
+                perror("ERROR: No se pudo enviar la informacion.\n");
+            }
+            else{
+                
+                close(sockfd);
+                return 0;
+            }
+            
+            cont++;
+        }
+        /*while (1) {
             
             //int status = system("date > /tmp/log_recv");
             //printf("system() status: %d", status);
@@ -75,7 +92,7 @@ int insertarRegistro(char *nombreTabla, char **valores, int numeroValores, statu
                     }
                 }
             }
-        }
+        }*/
         /*while ((n = read(sockfd, recvBuff, sizeof (recvBuff) - 1)) > 0) {
             recvBuff[n - 1] = '\0';
             printf("\nRcv: '%s'", recvBuff);
@@ -95,7 +112,7 @@ int insertarRegistro(char *nombreTabla, char **valores, int numeroValores, statu
         }*/
 
         close(sockfd);
-        return 0;
+        return -1;
     }
     return -1;
 }
@@ -107,9 +124,8 @@ int insertarEvento(int id_nodo, char *fecha, char *hora, char *evento){
     int cont;
 
     if (evento != NULL && fecha != NULL && hora != NULL && configuracion->ip_servidor_datos != NULL) {
-        int sockfd = 0, n;
+        int sockfd = 0;
         char fromUser[300];
-        char recvBuff[1024];
 
         struct sockaddr_in serv_addr;
         int conn;
@@ -135,7 +151,7 @@ int insertarEvento(int id_nodo, char *fecha, char *hora, char *evento){
         }
 
         cont = 0;
-        while ((n = read(sockfd, recvBuff, sizeof (recvBuff) - 1)) > 0) {
+        /*while ((n = read(sockfd, recvBuff, sizeof (recvBuff) - 1)) > 0) {
             recvBuff[n - 1] = '\0';
             if(strcmp(recvBuff, "Inicio")==0){
                 write(sockfd, fromUser, strlen(fromUser));
@@ -149,10 +165,25 @@ int insertarEvento(int id_nodo, char *fecha, char *hora, char *evento){
                     write(sockfd, fromUser, strlen(fromUser));
                 }
             }
+        }*/
+        
+        while(cont < 3){                                                //Maximo 3 reintentos
+            
+            int status = write(sockfd, fromUser, strlen(fromUser));     //Enviamos los datos de mediciones
+            
+            if(status < 0){
+                perror("ERROR: No se pudo enviar la informacion.\n");
+            }
+            else{
+                
+                close(sockfd);
+                return 0;
+            }
+            cont++;
         }
 
         close(sockfd);
-        return 0;
+        return -1;
     }
     return -1;
 }

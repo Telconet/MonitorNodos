@@ -1,6 +1,10 @@
 Bitacora de cambios
 *******************
 
+[1.1.2]
+
+ - Se corrigio error de envio de datos al servidor (Falta commit)
+
 [1.1.1]
 
  - Se anadio eleccion de puerto DIO para A/C principal y backup
