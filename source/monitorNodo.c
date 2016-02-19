@@ -25,33 +25,100 @@ int main(int argc, char *argv[]) {
 
     
     //MODBUS TEST
+    //USO:  monnod   <direccion> <baud rate>
     modbus_t *contexto_modbus = NULL;
     
-    printf("Baud rate: %d\n", atoi(argv[2]));
+    int bauds = atoi(argv[2]);
     
-    int what =  conectar_modbus_serial(MODO_RS_485_FD, atoi(argv[2]), COM2, 8, 'N', 1, &contexto_modbus, 10);
     
-    if(what < 0 || contexto_modbus == NULL){
+    
+    printf("Baud rate: %d\n", bauds);
+    
+    conectar_modbus_serial(MODO_RS_485_HD, bauds, COM2, 8, 'N', 1, &contexto_modbus, 10);
+    
+    /*if(what < 0 || contexto_modbus == NULL){
 	printf("Error al conectar modbus...");
 	exit(-1);
+    }*/
+    
+    speed_t baud_rate = 0;
+    
+    switch(bauds){
+	
+	case 19200:
+	    baud_rate = B19200;
+	    break;
+	case 115200:
+	    baud_rate = B115200;
+	    break;
+	case 9600:
+	    baud_rate = B9600;
+	    break;
+	case 57600:
+	    baud_rate = B57600;
+	    break;
+	default:
+	    baud_rate = B19200;
+	    break;
+	
     }
     
     
-    int fd = open(COM2, O_RDWR);
+    int fd = open(COM2, O_RDWR | O_SYNC);
     
-    
-    int mcr = AUTO485FD;
-    if( ioctl(fd, TIOC_SBCS485, &mcr) < 0){
-	perror("error de ioctl\n");
-    }
     
 
     if( fd < 0){
 	fprintf(stderr, "No se pudo abrir el puerto COM2");
     }
     
+    
+    //Parametros seriales
+    if(establecer_atributos_interface(fd, baud_rate, 0, MODO_RS_485_HD) < 0){
+	printf("error de establecer atributos\n");
+    }//sin paridad...
+    
     char buf[100];
+    char recp[100];
     memset(buf, 0, 100);
+    
+    
+    
+    int err;
+    while(1){
+	
+	//recibimos
+	    
+	if(strstr(argv[1], "enviar")){
+	    memset(buf, 0, 100);
+	    snprintf(buf, 100, "Un dia menos de vida!\n");
+	    
+	    printf("%s\n", buf);
+	
+	    err = write(fd, buf, strlen(buf));
+	    
+	    if(err < 0)
+		perror("Error en write: ");
+	}
+	else{
+	    
+	    memset(recp, 0, 100);
+	    
+	    err = read(fd, recp, 100);
+	    
+	    printf("Recibimos %d bytes y leimos %s\n", err, recp);
+	    
+	    
+	    if(err < 0)
+		perror("Error en read: ");
+	}
+	
+	sleep(2);
+    }
+    
+    close(fd);
+    
+    exit(-1);
     
 
 	
@@ -143,23 +210,7 @@ int main(int argc, char *argv[]) {
     printf("Leido (hex) 0x%X\n", *(unsigned int*)&leido);
     printf("Leido (float): %f\n", leido);*/
     
-    while(1){
-	
-	memset(buf, 0, 100);
-	snprintf(buf, 100, "Hola Mundo\n");
-	
-	printf("%s\n", buf);
-    
-	int err = write(fd, buf, strlen(buf));
-	
-	if(err < 0)
-	    perror("Error en write: ");
-	sleep(1);
-    }
-    
-    close(fd);
-    
-    exit(-1);
+
     
     //***********
 

@@ -1,6 +1,81 @@
 #include "modbustn.h"
 
 
+int mcr; 
+
+/**
+ * Establece los parametros de la interface serial a nivel de SW.
+ *
+ */
+
+
+int establecer_atributos_interface (int fd, int speed, int parity, int modo)
+{
+    
+
+        
+        /*Código tomado de http://stackoverflow.com/questions/6947413/how-to-open-read-and-write-from-serial-port-in-c */
+    
+        struct termios tty;
+        memset (&tty, 0, sizeof tty);
+        
+        if (tcgetattr (fd, &tty) != 0)
+        {
+            perror("error de tcgetattr");
+            return -1;
+        }
+
+        cfsetospeed (&tty, speed);
+        cfsetispeed (&tty, speed);
+
+        tty.c_cflag = (tty.c_cflag & ~CSIZE) | CS8;     // 8-bit chars
+        // disable IGNBRK for mismatched speed tests; otherwise receive break
+        // as \000 chars
+        tty.c_iflag &= ~IGNBRK;         // disable break processing
+        tty.c_lflag = 0;                // no signaling chars, no echo,
+                                        // no canonical processing
+        tty.c_oflag = 0;                // no remapping, no delays
+        tty.c_cc[VMIN]  = 1;            // read doesn't block   (if zero). Si n > 0, llamada read se bloqueará hasta que reciba al menos n caracteres
+        tty.c_cc[VTIME] = 0;            // 0.5 seconds read timeout
+
+        tty.c_iflag &= ~(IXON | IXOFF | IXANY); // shut off xon/xoff ctrl
+
+        tty.c_cflag |= (CLOCAL | CREAD);// ignore modem controls,
+                                        // enable reading
+        tty.c_cflag &= ~(PARENB | PARODD);      // shut off parity
+        tty.c_cflag |= parity;                  //si parity = 0 --> no parity
+        tty.c_cflag &= ~CSTOPB;                 //one stop bit
+        tty.c_cflag &= ~CRTSCTS;
+
+        if (tcsetattr (fd, TCSANOW, &tty) != 0)
+        {
+                perror("error de tcsetattr");
+                return -1;
+        }
+        
+        if(modo == MODO_RS_485_FD){
+            mcr = AUTO485FD;
+        }
+        else if(modo == MODO_RS_485_HD){
+             mcr = AUTO485HD;
+             printf("Modo HD\n");
+        }
+        
+        //A nivel de HW, establecemos conectividad full duplex
+        if(modo == MODO_RS_485_FD || modo == MODO_RS_485_HD){
+            int status = ioctl(fd,  TIOC_SBCS485, &mcr);
+            printf("what\n");
+            printf("Status ioctl = %d\n", status);
+            if( status < 0){
+                perror("error de ioctl\n");
+                return -1;
+            }
+        }
+        
+        return 0;
+}
+
+
 /**
  * Para RS-232 el unico baudrate disponible es 115200
  */
@@ -32,7 +107,6 @@ int configurar_puerto_serial(int modo_puerto, int baudrate, char paridad, int st
             return -1;
         }
     }
-    
     
     //Mapeamos la region de memoria para configurar el modo del puerto...COM2 Mode Register
     unsigned char *COM2_MODE_REGISTER = mmap(0, getpagesize(), PROT_READ|PROT_WRITE, MAP_SHARED, fd_com2, 0x22C00000);
@@ -98,6 +172,8 @@ int configurar_puerto_serial(int modo_puerto, int baudrate, char paridad, int st
     munmap((void *)COM2_FORMAT, getpagesize());
     munmap((void *)RS485_SUPPORT_REGISTER, getpagesize());
     
+    
+    
     close(fd_com2);
     
     return 0; 
@@ -120,21 +196,21 @@ int conectar_modbus_serial(int modo_puerto, int baudrate, char *tty, int data_bi
         return -1;
     }
     
-    *contexto = modbus_new_rtu(tty, baudrate, paridad, data_bits, stop_bits);
+    /**contexto = modbus_new_rtu(tty, baudrate, paridad, data_bits, stop_bits);
     
     if(*contexto == NULL){
         fprintf(stderr, "Error al crear el contexto modbus\n");
         return -1;
-    }
+    }*/
     
     //
    
     
     //Establecer nuestra id de esclavo
-    int err = modbus_set_slave(*contexto, id_esclavo);
+    /*int err = modbus_set_slave(*contexto, id_esclavo);
     
     if(err < 0)
-        perror("Error al establecer ID del esclavo");
+        perror("Error al establecer ID del esclavo");*/
 
     //El siguiente mapping sera usado.
     
@@ -165,14 +241,14 @@ int conectar_modbus_serial(int modo_puerto, int baudrate, char *tty, int data_bi
     //Humedad                  15                       40031 - 40032
     
     //4 bits (r/w), 3 input bits (read only), 0 HR (r/w), 32 input register (read only).
-    mapeo_modbus = modbus_mapping_new(4, 3, 0, 32);
+    //mapeo_modbus = modbus_mapping_new(4, 3, 0, 32);
 
     
-    if(mapeo_modbus == NULL){
+    /*if(mapeo_modbus == NULL){
         printf("ERROR: No se pudo crear el mapeo modbus de los registros\n");
         modbus_free(*contexto);
         return -1;
-    }
+    }*/
     
     //Iniciamos la conexion serial
     /*if(modbus_connect(*contexto) == -1){

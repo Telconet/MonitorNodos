@@ -34,6 +34,7 @@
 #include <linux/ts_sbc.h>
 #include <asm/ioctls.h>
 #include <sys/ioctl.h>
+#include <termios.h>
 #include "modbus.h"
 
 //#include <net-snmp/net-snmp-config.h>
