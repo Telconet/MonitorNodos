@@ -10,10 +10,7 @@ int mcr;
 
 
 int establecer_atributos_interface (int fd, int speed, int parity, int modo)
-{
-    
-
-        
+{        
         /*Código tomado de http://stackoverflow.com/questions/6947413/how-to-open-read-and-write-from-serial-port-in-c */
     
         struct termios tty;
@@ -196,21 +193,23 @@ int conectar_modbus_serial(int modo_puerto, int baudrate, char *tty, int data_bi
         return -1;
     }
     
-    /**contexto = modbus_new_rtu(tty, baudrate, paridad, data_bits, stop_bits);
+    *contexto = modbus_new_rtu(tty, baudrate, paridad, data_bits, stop_bits);
     
     if(*contexto == NULL){
         fprintf(stderr, "Error al crear el contexto modbus\n");
         return -1;
-    }*/
-    
-    //
-   
+    }
     
     //Establecer nuestra id de esclavo
-    /*int err = modbus_set_slave(*contexto, id_esclavo);
     
-    if(err < 0)
-        perror("Error al establecer ID del esclavo");*/
+    if(id_esclavo > 0){
+        int err = modbus_set_slave(*contexto, id_esclavo);
+        
+        if(err < 0)
+            perror("Error al establecer ID del esclavo");
+    }
+    
+
 
     //El siguiente mapping sera usado.
     
@@ -241,50 +240,58 @@ int conectar_modbus_serial(int modo_puerto, int baudrate, char *tty, int data_bi
     //Humedad                  15                       40031 - 40032
     
     //4 bits (r/w), 3 input bits (read only), 0 HR (r/w), 32 input register (read only).
-    //mapeo_modbus = modbus_mapping_new(4, 3, 0, 32);
+    mapeo_modbus = modbus_mapping_new(4, 3, 0, 32);     //coils, input bits, reg, input regs
 
     
-    /*if(mapeo_modbus == NULL){
+    if(mapeo_modbus == NULL){
         printf("ERROR: No se pudo crear el mapeo modbus de los registros\n");
         modbus_free(*contexto);
         return -1;
-    }*/
+    }
     
     //Iniciamos la conexion serial
-    /*if(modbus_connect(*contexto) == -1){
+    if(modbus_connect(*contexto) == -1){
         printf("ERROR: No se pudo iniciar la comunicacion modbus serial\n");
         modbus_free(*contexto);
         return -1;
     }
     
     
-    //Aqui cambiamos los parametros seriales (si usamos modo RS-485), para activar el Half Duplex Automatico.
-    int mcr = -1;
+    //Aqui cambiamos los parametros seriales (si usamos modo RS-485), para activar el Half Duplex Automatico
+    //Y los parametros seriales
     int fd  = modbus_get_socket(*contexto);
     
-    mcr = AUTO485HD;
-    ioctl(fd, TIOC_SBCS485, &mcr);
+    //Convertimos el baud rate int a speed_t
+    speed_t baud_rate;
     
-    printf("fd serial (conectar modbus serial): %d\n", fd);
-    
-    if(modo_puerto == MODO_RS_485_HD){
-        mcr = AUTO485HD;
-        if( ioctl(fd, TIOC_SBCS485, &mcr) < 0){
-            perror("error de ioctl\n");
-            return -1;
-        }
+    switch(baudrate){
+	
+	case 19200:
+	    baud_rate = B19200;
+	    break;
+	case 115200:
+	    baud_rate = B115200;
+	    break;
+	case 9600:
+	    baud_rate = B9600;
+	    break;
+	case 57600:
+	    baud_rate = B57600;
+	    break;
+	default:
+	    baud_rate = B19200;
+	    break;
+	
     }
-    else if(modo_puerto == MODO_RS_485_FD){
-        mcr = AUTO485FD;
-        printf("Modo RS485 FULL DUPLEX\n");
-        if( ioctl(fd, TIOC_SBCS485, &mcr) < 0){
-            perror("error de ioctl\n");
-            return -1;
-        }
-    }*/
+
     
-    
-    //printf("contectar_modbus_serial context pointer... %p\n", *contexto);
+   
+    if( establecer_atributos_interface(fd, baud_rate, 0, modo_puerto) < 0){      //HW y SW
+        perror("No se pudieron cambiar los parametros seriales\n");
+        modbus_free(*contexto);
+        return -1;
+    }
+
     
     return 0;
 }

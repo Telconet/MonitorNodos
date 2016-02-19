@@ -22,28 +22,190 @@ int activarPuerto(puerto_DIO puerto_DIO_0);
 int main(int argc, char *argv[]) {
     
     
-
+    //		0	1		2	3			4			  5
+    //USO:  monnod   <direccion> <baud rate> <cliente o servidor> <coil input_bit input_reg> <# regs> <direccion registro inical>
     
-    //MODBUS TEST
-    //USO:  monnod   <direccion> <baud rate>
-    modbus_t *contexto_modbus = NULL;
+    if(strstr(argv[3], "cliente")){
+	
+	modbus_t *contexto_modbus = NULL;
+	
+	int bauds = atoi(argv[2]);
+	
+	
+	int direccion = atoi(argv[1]);
+	int direccion_registro = atoi(argv[6]);
+	
+	printf("Direccion esclavo: %d\n", direccion);
+	
+	int what = conectar_modbus_serial(MODO_RS_485_HD, bauds, COM2, 8, 'N', 1, &contexto_modbus, direccion);		//direccion a leer va aqui
+	
+	if(what < 0 || contexto_modbus == NULL){
+	    printf("Error al conectar modbus...");
+	    exit(-1);
+	}
+	    
+	
+	int numero = atoi(argv[5]);
+	int i = 0;
+	
+	if(strstr(argv[4], "coil")){
+	    uint8_t *valor_leido = malloc(numero*sizeof(uint8_t));
+	    
+	    if(modbus_read_bits(contexto_modbus, direccion_registro, numero, valor_leido) < 0){
+		fprintf(stderr, "%s\n", modbus_strerror(errno));
+	    }
+	    else{
+		for(i = 0; i < numero; i++){
+		    printf("Bit %d leido: 0x%08x\n", i, valor_leido[i]);
+		}
+	    }
+	    
+	    free(valor_leido);
+	}
+	else if(strstr(argv[4], "input_bit")){
+	     uint8_t *valor_leido = malloc(numero*sizeof(uint8_t));
+	     
+	    if(modbus_read_input_bits(contexto_modbus, direccion_registro, numero, valor_leido) < 0){
+		fprintf(stderr, "%s\n", modbus_strerror(errno));
+	    }
+	    else{
+		for(i = 0; i < numero; i++){
+		    printf("Input bit %d leido: 0x%08x\n", i, valor_leido[i]);
+		}
+	    }
+	    
+	     free(valor_leido);
+	}
+	else if(strstr(argv[4], "input_reg")){
+	    uint16_t *valor_leido = malloc(numero*sizeof(uint16_t));
+	     
+	    if(modbus_read_input_registers(contexto_modbus, direccion_registro, numero, valor_leido) < 0){
+		fprintf(stderr, "%s\n", modbus_strerror(errno));
+	    }
+	    else{
+		for(i = 0; i < numero; i++){
+		    printf("Input register %d: 0x%08x\n", i, valor_leido[i]);
+		}
+	    }
+	    
+	    free(valor_leido);
+	}
+	else{
+	    exit(-1);
+	}
+	
+	
+    }
+    else{
+	
+	//Somos server
+	
+	//MODBUS TEST
+	
+	modbus_t *contexto_modbus = NULL;
+	
+	int bauds = atoi(argv[2]);
+	
+	
+	int direccion = atoi(argv[1]);
+	printf("Direccion :%d\n", direccion);    
+	printf("Baud rate: %d\n", bauds);
+	
+	int what = conectar_modbus_serial(MODO_RS_485_HD, bauds, COM2, 8, 'N', 1, &contexto_modbus, direccion);
+	
+	if(what < 0 || contexto_modbus == NULL){
+	    printf("Error al conectar modbus...");
+	    exit(-1);
+	}
+	    
+	//empezamos...
+	int res2 = pthread_mutex_init(&mutexModbus, NULL);
+	    
+	if(res2 != 0){
+	    perror("ERROR: No se pudo crear el mutex modbus. Saliendo.");
+	    exit(-1);
+	}
+	
+       
+	int tModbus = pthread_create(&hiloModbus, NULL, (void *)monitorModbus, (void *) contexto_modbus);
     
-    int bauds = atoi(argv[2]);
+	if (tModbus != 0) {
+	    perror("ERROR: No se pudo crear el thread Modbus. Saliendo...\n");
+	    exit(-1);
+	}
+	
+	uint16_t i = 0;
+	int bit = 0;
+	while(true){
+	    
+	    pthread_mutex_lock(&mutexModbus);
+	    if(bit == 0){
+		
+		printf("fuck\n");
+		if(asignarBit(mapeo_modbus, OFF,0) < 0){
+		    printf("error al cambiar bit...\n");
+		}
+		asignarBit(mapeo_modbus, OFF,1);
+		asignarBit(mapeo_modbus, OFF,2);
+		asignarBit(mapeo_modbus, OFF,3);
+		asignarInputBit(mapeo_modbus, OFF, 0);
+		asignarInputBit(mapeo_modbus, OFF, 1);
+		asignarInputBit(mapeo_modbus, OFF, 2);
+		bit = 1;
+		printf(" what\n");
+	    }
+	    else{
+		asignarBit(mapeo_modbus, ON,0);
+		asignarBit(mapeo_modbus, ON,1);
+		asignarBit(mapeo_modbus, ON,2);
+		asignarBit(mapeo_modbus, ON,3);
+		asignarInputBit(mapeo_modbus, ON, 0);
+		asignarInputBit(mapeo_modbus, ON, 1);
+		asignarInputBit(mapeo_modbus, ON, 2);
+		bit = 0;
+		printf("not\n");
+	    }
+	    
+	    printf("Input regs...\n");
+	    
+	    asignarRegistroInputFloat(mapeo_modbus, 2565.3, 0, 1);
+	    asignarRegistroInput(mapeo_modbus, i + 2, 2);
+	    asignarRegistroInput(mapeo_modbus, i + 3, 3);
+	    asignarRegistroInput(mapeo_modbus, i + 4, 4);
+	    asignarRegistroInput(mapeo_modbus, i + 3, 5);
+	    asignarRegistroInput(mapeo_modbus, i + 5, 6);
+	    asignarRegistroInput(mapeo_modbus, i + 6, 7);
+	    asignarRegistroInput(mapeo_modbus, i + 7, 8);
+	    asignarRegistroInput(mapeo_modbus, i + 8, 9);
+	    asignarRegistroInput(mapeo_modbus, i + 9, 10);
+	    asignarRegistroInput(mapeo_modbus, i + 10, 11);
+	    asignarRegistroInput(mapeo_modbus, i + 11, 12);
+	    asignarRegistroInput(mapeo_modbus, i + 12, 13);
+	    asignarRegistroInput(mapeo_modbus, i + 13, 14);
+	    asignarRegistroInput(mapeo_modbus, i + 14, 15);
+	    asignarRegistroInput(mapeo_modbus, i + 15, 16);
+	
+	    i++;
+	    printf("wow\n");
+	    pthread_mutex_unlock(&mutexModbus);
+	    
+	    sleep(2);
+	}
+	    
+	
+	
+    }
+    
+        
+    
+    
+    //printf("0x%X\n", mapeo_modbus->tab_input_registers[direccion]);
     
     
     
-    printf("Baud rate: %d\n", bauds);
+        //speed_t baud_rate = 0;
     
-    conectar_modbus_serial(MODO_RS_485_HD, bauds, COM2, 8, 'N', 1, &contexto_modbus, 10);
-    
-    /*if(what < 0 || contexto_modbus == NULL){
-	printf("Error al conectar modbus...");
-	exit(-1);
-    }*/
-    
-    speed_t baud_rate = 0;
-    
-    switch(bauds){
+    /*switch(bauds){
 	
 	case 19200:
 	    baud_rate = B19200;
@@ -61,10 +223,10 @@ int main(int argc, char *argv[]) {
 	    baud_rate = B19200;
 	    break;
 	
-    }
+    }*/
     
     
-    int fd = open(COM2, O_RDWR | O_SYNC);
+    /*int fd = open(COM2, O_RDWR | O_SYNC);
     
     
 
@@ -118,84 +280,8 @@ int main(int argc, char *argv[]) {
     
     close(fd);
     
-    exit(-1);
+    exit(-1);*/
     
-
-	
-	
-    /*int res2 = pthread_mutex_init(&mutexModbus, NULL);
-	
-    if(res2 != 0){
-	perror("ERROR: No se pudo crear el mutex modbus. Saliendo.");
-	exit(-1);
-    }
-    int direccion = 10; //atoi(argv[1]);
-    printf("Direccion :%d\n", direccion);
-   
-    int tModbus = pthread_create(&hiloModbus, NULL, (void *)monitorModbus, (void *) contexto_modbus);
-
-    if (tModbus != 0) {
-	perror("ERROR: No se pudo crear el thread Modbus. Saliendo...\n");
-	exit(-1);
-    }
-    
-    uint16_t i = 0;
-    int bit = 0;
-    while(true){
-	
-	if(bit == 0){
-	    
-	    printf("fuck\n");
-	    if(asignarBit(mapeo_modbus, OFF,0) < 0){
-		printf("error al cambiar bit...\n");
-	    }
-	    asignarBit(mapeo_modbus, OFF,1);
-	    asignarBit(mapeo_modbus, OFF,2);
-	    asignarBit(mapeo_modbus, OFF,3);
-	    asignarInputBit(mapeo_modbus, OFF, 0);
-	    asignarInputBit(mapeo_modbus, OFF, 1);
-	    asignarInputBit(mapeo_modbus, OFF, 2);
-	    bit = 1;
-	    printf(" what\n");
-	}
-	else{
-	    asignarBit(mapeo_modbus, ON,0);
-	    asignarBit(mapeo_modbus, ON,1);
-	    asignarBit(mapeo_modbus, ON,2);
-	    asignarBit(mapeo_modbus, ON,3);
-	    asignarInputBit(mapeo_modbus, ON, 0);
-	    asignarInputBit(mapeo_modbus, ON, 1);
-	    asignarInputBit(mapeo_modbus, ON, 2);
-	    bit = 0;
-	    printf("not\n");
-	}
-	
-	printf("Input regs...\n");
-	
-	asignarRegistroInputFloat(mapeo_modbus, 2565.3, 0, 1);
-	asignarRegistroInput(mapeo_modbus, i + 2, 2);
-	asignarRegistroInput(mapeo_modbus, i + 3, 3);
-	asignarRegistroInput(mapeo_modbus, i + 4, 4);
-	asignarRegistroInput(mapeo_modbus, i + 3, 5);
-	asignarRegistroInput(mapeo_modbus, i + 5, 6);
-	asignarRegistroInput(mapeo_modbus, i + 6, 7);
-	asignarRegistroInput(mapeo_modbus, i + 7, 8);
-	asignarRegistroInput(mapeo_modbus, i + 8, 9);
-	asignarRegistroInput(mapeo_modbus, i + 9, 10);
-	asignarRegistroInput(mapeo_modbus, i + 10, 11);
-	asignarRegistroInput(mapeo_modbus, i + 11, 12);
-	asignarRegistroInput(mapeo_modbus, i + 12, 13);
-	asignarRegistroInput(mapeo_modbus, i + 13, 14);
-	asignarRegistroInput(mapeo_modbus, i + 14, 15);
-	asignarRegistroInput(mapeo_modbus, i + 15, 16);
-    
-	i++;
-	printf("wow\n");
-	
-	sleep(2);
-    }*/
-    
-    //printf("0x%X\n", mapeo_modbus->tab_input_registers[direccion]);
     
     
     
