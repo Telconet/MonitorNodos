@@ -9,7 +9,7 @@
 #include "ADC.h"
 #include "DIO.h"
 #include "IPC.h"
-
+#include "modbustn.h"
 
 //Definiciones
 #define MAX_BUFFER_SIZE 20
@@ -48,20 +48,20 @@
 #define INTERVALO_MON_PRED 5                   //(5 minutos)
 
 //Version del programa
-const volatile static char version[] = "1.1";
+const volatile static char version[] = "1.2";
 
 //Configuracion del monitor
 struct configuracionMonitor{
     int intervaloMonitoreo;
     int intervaloMonitoreoPuerta;
-    int longitudValoresPemitidos;
-    int puertoBD;
-    int numeroServidoresSNMP;
-    int numeroValoresMinimosPermitidos;
-    int numeroDestinatariosAlertas;
-    int numeroMaximoControladores;
+    //int longitudValoresPemitidos;
+    //int puertoBD;
+    //int numeroServidoresSNMP;
+    //int numeroValoresMinimosPermitidos;
+    //int numeroDestinatariosAlertas;
+    //int numeroMaximoControladores;
     int numeroCanalesActivos;
-    int periodoEnvioEmails;
+    //int periodoEnvioEmails;
     float razonCT;
     int monitoreoAires;
     int puertoDIO_ACPrincipal;
@@ -73,17 +73,17 @@ struct configuracionMonitor{
     char *rutaArchivoColumnasBDADC;
     char *rutaArchivoColumnasBDDIO;
     char *rutaArchivoConfiguracion;
-    char *usuarioBD;
-    char *claveBD;
-    char *ipServidorBD;
-    char *BD;
-    char *comunidadSNMP;
-    char *nombreSesionSNMP;
-    char *ipServidorActualizaciones;
-    char **ipServidorSNMP;
-    char **valoresMinimosPermitidosMediciones;
-    char **destinatariosAlertas;
-    char **canalesActivos;
+    //char *usuarioBD;
+    //char *claveBD;
+    //char *ipServidorBD;
+    //char *BD;
+    //char *comunidadSNMP;
+    //char *nombreSesionSNMP;
+    //char *ipServidorActualizaciones;
+    //char **ipServidorSNMP;
+    //char **valoresMinimosPermitidosMediciones;
+    //char **destinatariosAlertas;
+    //char **canalesActivos;
 };
 
 
@@ -101,6 +101,12 @@ status_puerto_DIO status_A_C_backup; 	                            //Sensor del a
 
 pthread_mutex_t mutex_status_AACC;                                  //Mutex el status de aires acondicionados...
 
+
+//Para modbus
+pthread_mutex_t mutexModbus;
+int usandoModbus;
+
+
 //Definicion de funciones
 void salir(int status);
 
@@ -109,6 +115,8 @@ void manejarComandosControlador(void *sd);
 
 
 void monitorPuerta(void *sd);
+
+void monitorModbus(void *sd);
 
 void monitorAiresAcondicionados(void *sd);  
 

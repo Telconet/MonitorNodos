@@ -25,6 +25,12 @@
 #include <netdb.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <linux/ts_sbc.h>
+#include <asm/ioctls.h>
+#include <sys/ioctl.h>
+#include <termios.h>
+#include <sys/mman.h>
+#include "modbus.h"
 
 
 //#define DEBUG
@@ -136,6 +142,15 @@
 #define OID_CORRIENTE_AC_4 "1.3.6.1.4.1.65000.1.16"
 #define OID_VOLTAJE_AC_1 "1.3.6.1.4.1.65000.1.17"
 #define OID_VOLTAJE_AC_2 "1.3.6.1.4.1.65000.1.18"
+
+
+//Para modbus
+//PAra RS485
+#define TIOC_SBCC485 _IOW('T',0x70,int) /*TS RTS/485 mode Clear*/
+#define TIOC_SBCS485 _IOW('T',0x71, int) /*TS RTS/485 mode Set */
+#define AUTO485FD 1
+#define RTSMODE 2
+#define AUTO485HD 4
 
 //Estructuras
 //Medicion

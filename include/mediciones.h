@@ -10,7 +10,6 @@
 //mutex de temperatura
 pthread_mutex_t mutexTemperatura;
 
-
 //Definimos los offsets de la lista de mediciones
 #define OFFSET_TEMPERATURA 0
 #define OFFSET_HUMEDAD  3
@@ -111,9 +110,6 @@ float voltajeACorrienteAC(uint16_t *voltajes, int numeroMuestras, adcrange rango
 float voltajeANivelCombustible(float voltaje);
 
 float *convertirAfloat();
-
-int convertirMinimosAfloat();
-
 
 #endif
 

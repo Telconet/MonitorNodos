@@ -396,141 +396,6 @@ struct configuracionMonitor* leerArchivoConfiguracion(char *rutaArchivo){
                     }
                     else return NULL;
                 }
-                else if(strstr(linea, IP_SERVIDOR_BASE_DE_DATOS) != NULL){
-                    valores = obtenerValorConfig(linea, &num);
-                    if(valores != NULL){
-                        configuracion->ipServidorBD = valores[0];
-                        printf("INFO: IP del servidor de la base de datos: %s\n", configuracion->ipServidorBD);
-                    }
-                    else return NULL;
-                }
-                else if(strstr(linea, USUARIO_BASE_DE_DATOS) != NULL){
-                    valores = obtenerValorConfig(linea, &num);
-                    if(valores != NULL){
-                        configuracion->usuarioBD = valores[0];
-                        printf("INFO: Usuario de la base de datos: %s\n", configuracion->usuarioBD);
-                    }
-                    else return NULL;
-
-                }
-                else if(strstr(linea, CLAVE_BASE_DE_DATOS) != NULL){
-                    valores = obtenerValorConfig(linea, &num);
-                    if(valores != NULL){
-                        configuracion->claveBD = valores[0];
-                    }
-                    else return NULL;
-                   
-                }
-                else if(strstr(linea, BASE_DE_DATOS) != NULL){
-                    valores = obtenerValorConfig(linea, &num);
-                    
-                    if(valores != NULL){
-                        configuracion->BD = valores[0];
-                        printf("INFO: Base de datos: %s\n", configuracion->BD);
-                    }
-                    else return NULL;
-                    
-                }
-                else if(strstr(linea, PUERTO_BASE_DE_DATOS) != NULL){
-                    
-                    valores = obtenerValorConfig(linea, &num);
-                    if(valores != NULL){
-                        int puerto = atoi(valores[0]);
-                          
-                        if(puerto == 0){
-                            configuracion->puertoBD = 0;    //valor predeterminado
-                        }
-                        else{
-                            configuracion->puertoBD = puerto;    //valor predeterminado
-                        }
-                        printf("INFO: Puerto de la base de datos: %d\n", configuracion->puertoBD);
-                    }
-                    else return NULL;
-                }
-                else if(strstr(linea, IP_SERVIDOR_SNMP) != NULL){
-                    valores = obtenerValorConfig(linea, &num);
-                    if(valores != NULL){
-                        configuracion->ipServidorSNMP = valores;
-                        configuracion->numeroServidoresSNMP = num; 
-                        int i;
-                        for(i = 0; i < configuracion->numeroServidoresSNMP; i++){
-                            //printf("INFO: IP del servidor SNMP %d: %s\n", (i+1), configuracion->ipServidorSNMP[i]);
-                        }
-                    }
-                    else return NULL;
-                }
-                else if(strstr(linea, COMUNIDAD_SNMP) != NULL){
-                    valores = obtenerValorConfig(linea, &num);
-                    if(valores != NULL){
-                        configuracion->comunidadSNMP = valores[0];
-                        // printf("INFO: Comunidad SNMP: %s\n", configuracion->comunidadSNMP);
-                    }
-                    else return NULL;
-                }
-                else if(strstr(linea, SESION_SNMP) != NULL){ 
-                    valores = obtenerValorConfig(linea, &num);
-                    if(valores != NULL){
-                        configuracion->nombreSesionSNMP = valores[0];
-                        //printf("INFO: Sesion SNMP: %s\n", configuracion->nombreSesionSNMP);
-                    }
-                    else return NULL;
-                }
-                else if(strstr(linea, SERVIDOR_ACTUALIZACIONES) != NULL){ 
-                    valores = obtenerValorConfig(linea, &num);
-                    if(valores != NULL){
-                        configuracion->ipServidorActualizaciones = valores[0];
-                        printf("INFO: Direccion IP del servidor de actualizaciones: %s\n", configuracion->ipServidorActualizaciones);
-                    }
-                    else return NULL;
-                }
-                else if(strstr(linea, VALORES_MINIMOS_PERMITIDOS) != NULL){
-                    valores = obtenerValorConfig(linea, &num);
-                    if(valores != NULL){
-                        
-                        //configuracion->valoresMinimosPermitidosMediciones = valores;
-                        configuracion->numeroValoresMinimosPermitidos = num;
-        
-                        //Asignamos los valores a la configuracion
-                        configuracion->valoresMinimosPermitidosMediciones = valores;
-                    }
-                    else return NULL;
-                }
-                else if(strstr(linea, DESTINATARIOS_ALERTAS) != NULL){
-                    valores = obtenerValorConfig(linea, &num);
-                    if(valores != NULL){
-                        //configuracion->valoresMinimosPermitidosMediciones = valores;
-                        configuracion->numeroDestinatariosAlertas = num;
-        
-                        //Asignamos los valores a la configuracion
-                        configuracion->destinatariosAlertas = valores;
-#ifdef DEBUG
-                        int i=0;
-                        for(i = 0; i< configuracion->numeroDestinatariosAlertas; i++){
-                            printf("Destinatario %d: %s\n", i+1, configuracion->destinatariosAlertas[i]);
-                        }
-#endif
-                    }
-                    else return NULL;
-                }
-                else if(strstr(linea, HABILITAR_ALERTAS) != NULL){
-                    valores = obtenerValorConfig(linea, &num);
-                    if(valores != NULL){
-                        
-                        //configuracion->valoresMinimosPermitidosMediciones = valores;
-                        configuracion->numeroCanalesActivos = num;
-                        //Asignamos los valores a la configuracion
-                        configuracion->canalesActivos = valores;
-                    }
-                    else return NULL;
-                }
-                else if(strstr(linea, PERIODO_ENVIO_EMAILS)!= NULL){      
-                    valores = obtenerValorConfig(linea, &num);
-                    if(valores != NULL){
-                        configuracion->periodoEnvioEmails = atoi(valores[0]);
-                        printf("INFO: Periodo de envio de e-mails de alerta: %d minutos.\n", configuracion->periodoEnvioEmails);
-                    }
-                    else return NULL;
-                }
                 else if(strstr(linea, RAZON_CT)!= NULL){      
                     valores = obtenerValorConfig(linea, &num);
                     if(valores != NULL){
@@ -599,7 +464,7 @@ struct configuracionMonitor* leerArchivoConfiguracion(char *rutaArchivo){
                         }
                         printf("INFO: Puerto DIO del A/C backup: %d\n", configuracion->puertoDIO_ACBackup);
                     }
-                    else return NULL;
+                    else return NULL; 
                 }
             }
         }
@@ -694,5 +559,71 @@ char **obtenerValorConfig(char *linea, int *numeroValores){
         
     }
     return buffer;
+}
+
+
+
+
+/**
+ *Funcion que manejara las solicitudes MODBUS
+ */
+void monitorModbus(void *sd){
+    
+    modbus_t *contexto_modbus = (modbus_t *)sd;
+    
+    if(sd == NULL){
+        perror("ERROR: No se recibio el contexto modbus. Se deshabilito MODBUS.\n");
+        pthread_exit((void *)-1);
+    }
+    
+    //Solicitud recibida
+    uint8_t solicitud[MODBUS_TCP_MAX_ADU_LENGTH];
+    
+    //Empezamos a oir el puerto serio. Para este instante ya debemos tener
+    //el contexto y mapa de registros listo.
+    while(true){
+        perror("Esperando por solicitudes...\n");
+        memset(solicitud, 0, MODBUS_TCP_MAX_ADU_LENGTH);
+        
+        int rc = modbus_receive(contexto_modbus, solicitud);                //esperamos comunicaci'on
+        
+        printf("rc: %d\n",rc);
+        
+        if(rc > 0){
+             pthread_mutex_lock(&mutexModbus);
+        
+            int i = 0;
+            char buffer[2*MODBUS_TCP_MAX_ADU_LENGTH + 1];
+            memset(buffer, 0, 2*MODBUS_TCP_MAX_ADU_LENGTH + 1);
+            
+            printf("Solicitud: ");
+            for(i=0 ; i < rc; i++){
+                printf("%02X", solicitud[i]);
+            }
+            printf("\n");
+
+            printf("INFO: Respondiendo solicitud MODBUS... %s\n", buffer);
+            int err = modbus_reply(contexto_modbus, solicitud, rc, mapeo_modbus);    //MODBUS responde a la solicitud
+            printf("err = %d\n",err);
+            if(err < 0)
+                perror("Error al responder solicitud");
+            
+            pthread_mutex_unlock(&mutexModbus);
+        }
+        else{
+            modbus_close(contexto_modbus);
+            perror("Error al recibir solicitud modbus.\n");
+            modbus_connect(contexto_modbus);        //si hay error, reconectamos..
+            
+            //Setear nuevamente para RS485 HD o FD..
+            //TODO...
+            
+            /*int fd  = modbus_get_socket(contexto_modbus);
+    
+            int mcr = AUTO485HD;
+            ioctl(fd, TIOC_SBCS485, &mcr);*/
+
+        }
+    }
 }
 

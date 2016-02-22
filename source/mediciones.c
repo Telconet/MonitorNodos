@@ -3,7 +3,7 @@
 //#define DATACENTER
 
 
-int *canalesActivos;
+//int *canalesActivos;
 
 /**
  *Wrapper para la inicializacion del sistema de adquisicion de datos
@@ -15,9 +15,9 @@ int inicializarSistemaMediciones(int numeroMuestras, int numeroCanales) {
 
     statusTarjetaADC();
 
-    convertirMinimosAfloat();
+    //convertirMinimosAfloat();
 
-    canalesActivos = malloc(sizeof (int) *configuracion->numeroCanalesActivos);
+    //canalesActivos = malloc(sizeof (int) *configuracion->numeroCanalesActivos);
 
     return res;
 
@@ -248,6 +248,15 @@ int realizarMediciones(volatile struct medicion **med) { //CHECK!!!!!!!!!
 
             //Vemos a que medicion nos referimos
             //y realizamos el calculo correspondiente.
+            
+            //la información tiene que ser consistente para modbus
+            if(usandoModbus){
+                pthread_mutex_lock(&mutexModbus);
+            }
+            else{
+                printf("No usamos mutex modbus\n");
+            }
+            
             if (i == CANAL_TEMPERATURA_1) {
                 //temperatura
                 pthread_mutex_lock(&mutexTemperatura);
@@ -302,11 +311,16 @@ int realizarMediciones(volatile struct medicion **med) { //CHECK!!!!!!!!!
                 //printf("\nSe ha obtenido la medicion del canal %d: %.2f, Voltaje AC: %.2f V RMS\n", i, voltajeADC, actual->valor);
                 actual = actual->siguiente;
             }
-
-            /*if(actual == NULL){
-                printf("Actual es NULL\n");
-            }*/
+            
+            if(usandoModbus){
+                pthread_mutex_unlock(&mutexModbus);
+            }
+            else{
+                    printf("No usamos mutex modbus2\n");
+            }
         }
+        
+       
 
         free(data_canal_1);
         free(data_canal_2);
@@ -756,35 +770,5 @@ float voltajeACorrienteAC(uint16_t *voltajes, int numeroMuestras, adcrange rango
  */
 float voltajeANivelCombustible(float voltaje) {
     return 0.0f;
-}
-
-/**
- *Convierte la lista de minimos de char a float
- *
- */
-int convertirMinimosAfloat() {
-
-    int tamano = sizeof (float) *configuracion->numeroValoresMinimosPermitidos;
-
-
-    //return NULL;
-    if (minimos == NULL) {
-        minimos = malloc(tamano);
-    }
-
-    if (minimos != NULL) {
-        int i = 0;
-
-        for (i = 0; i < configuracion->numeroValoresMinimosPermitidos; i++) {
-            float numero = atof(configuracion->valoresMinimosPermitidosMediciones[i]);
-            minimos[i] = numero;
-
-            //printf("Tamano de minimos = %d\n", tamano);
-            //printf("Valor %d : %.4f\n", i, minimos[i]);
-        }
-
-        return 0;
-    }
-    else return -1;
 }
 
