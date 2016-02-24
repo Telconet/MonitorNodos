@@ -30,6 +30,8 @@
     //DIO4        --> Discrete input 1 (10001)
     //Combustible --> Discrete input 2 (10002)      
     //Generador   --> Discrete input 3 (10003)
+    //AACC P.     --> Discrete input 4 (10004)    --status rele (DIO_5) 
+    //AACC B.     --> Discrete input 5 (10005)    --status rele (DIO_6)
     //-Medidas ananlogas, usamos dos registros (input reg -> read only) consecutivos por medicion
     //Medicion              Canal Software          Registros MODBUS (2 por medicion, 32 bits)
     //I DC 1                    0                       40001 - 40002
@@ -50,34 +52,45 @@
     //V DC 4                   11                       40029 - 40030
     //Humedad                  15                       40031 - 40032
     
-#define COIL_RELE_0         0
-#define COIL_RELE_1         1
-#define COIL_RELE_2         2
-#define COIL_RELE_3         3
+#define COIL_RELE_1                     0
+#define COIL_RELE_2                     1
+#define COIL_RELE_3                     2
+#define COIL_RELE_4                     3
 
 #define INPUT_BIT_PUERTA             0
 #define INPUT_BIT_COMBUSTIBLE        1
 #define INPUT_BIT_GENERADOR          2
-
-#define REGISTRO_INPUT_I_DC_1        1
-#define REGISTRO_INPUT_I_DC_2        3
-#define REGISTRO_INPUT_I_DC_3        5
-#define REGISTRO_INPUT_I_DC_4        7
-#define REGISTRO_INPUT_I_AC_1        9
-#define REGISTRO_INPUT_I_AC_2        11
-#define REGISTRO_INPUT_I_AC_3        13
-#define REGISTRO_INPUT_I_AC_4        15
-#define REGISTRO_INPUT_TEMPERATURA   17
-#define REGISTRO_INPUT_V_AC_1        19
-#define REGISTRO_INPUT_V_AC_2        21
-#define REGISTRO_INPUT_V_DC_1        23
-#define REGISTRO_INPUT_V_DC_2        25
-#define REGISTRO_INPUT_V_DC_3        27
-#define REGISTRO_INPUT_V_DC_4        29
-#define REGISTRO_INPUT_HUMEDAD       31
+#define INPUT_BIT_AACC_PRINCIPAL     3
+#define INPUT_BIT_AACC_BACKUP        4
 
 
-//Contiene los registros, coils, inputs, etc
+#define REGISTRO_INPUT_I_DC_1        0          //original 1
+#define REGISTRO_INPUT_I_DC_2        2
+#define REGISTRO_INPUT_I_DC_3        4
+#define REGISTRO_INPUT_I_DC_4        6
+#define REGISTRO_INPUT_I_AC_1        8
+#define REGISTRO_INPUT_I_AC_2        10
+#define REGISTRO_INPUT_I_AC_3        12
+#define REGISTRO_INPUT_I_AC_4        14
+#define REGISTRO_INPUT_TEMPERATURA   16
+#define REGISTRO_INPUT_V_AC_1        18
+#define REGISTRO_INPUT_V_AC_2        20
+#define REGISTRO_INPUT_V_DC_1        22
+#define REGISTRO_INPUT_V_DC_2        24
+#define REGISTRO_INPUT_V_DC_3        26
+#define REGISTRO_INPUT_V_DC_4        28
+#define REGISTRO_INPUT_HUMEDAD       30
+
+#define NUMERO_COILS 4
+#define NUMERO_INPUT_BITS 5
+#define NUMERO_REG      0
+#define NUMERO_INPUT_REG  32
+
+
+//Para el manejo modbus
+int baud_rate;
+int id_esclavo;
+int modo_puerto;
 modbus_mapping_t *mapeo_modbus;
 
 

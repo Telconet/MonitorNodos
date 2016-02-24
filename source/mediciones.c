@@ -264,9 +264,11 @@ int realizarMediciones(volatile struct medicion **med) { //CHECK!!!!!!!!!
                 pthread_mutex_unlock(&mutexTemperatura);
 
                 //Sensor 1 esta junto a sensor de humedad               CHECK!!
-                if (i == CANAL_TEMPERATURA_1) {
-                    temperatura = actual->valor;
-                }
+               
+                temperatura = actual->valor;
+                
+                
+                asignarRegistroInputFloat(mapeo_modbus, actual->valor, REGISTRO_INPUT_TEMPERATURA, NO_SWAP);
 
                 //printf("\nSe ha obtenido la medicion del canal %d: %.4f, temperatura: %.2f C\n", i, voltajeADC, actual->valor);
                 actual = actual->siguiente;
@@ -277,38 +279,117 @@ int realizarMediciones(volatile struct medicion **med) { //CHECK!!!!!!!!!
                 actual->valor = voltajeADC;
 
                 actual = actual->siguiente;
+                
+                int onOrOff;
+                
+                if(actual->valor < 3.0f){
+                    onOrOff = OFF;
+                }
+                else onOrOff = ON;
+                
+                if(i == CANAL_COMBUSTIBLE){
+                    asignarInputBit(mapeo_modbus, onOrOff, INPUT_BIT_COMBUSTIBLE);
+                }
+                else if(i == CANAL_GENERADOR){
+                    asignarInputBit(mapeo_modbus, onOrOff, INPUT_BIT_GENERADOR);
+                }
+                
             } else if (i == CANAL_HUMEDAD) {
                 //humedad
                 actual->valor = voltajeAHumedad(voltajeADC, temperatura);
                 //printf("\nSe ha obtenido la medicion del canal %d: %.2f, humedad: %.2f %%HR\n,", i, voltajeADC, actual->valor);
+                asignarRegistroInputFloat(mapeo_modbus, actual->valor, REGISTRO_INPUT_HUMEDAD, NO_SWAP);
                 actual = actual->siguiente;
             } else if (i == CANAL_VOLTAJE_DC_1 || i == CANAL_VOLTAJE_DC_2 || i == CANAL_VOLTAJE_DC_3 || i == CANAL_VOLTAJE_DC_4) {
                 //voltajes DC
                 //
                 //if(minimos[i] > 30.0f){
                 actual->valor = voltajeAVoltajeDC(voltajeADC); //esto cambiara dependiendo de como se asignen
-                //}
-                /*else{
-                    actual->valor = voltajeAVoltajeDC(voltajeADC, VOLTAJE_DC_24V);
-                    actual = actual->siguiente;
-                }*/
-                //printf("\nSe ha obtenido la medicion del canal %d: %.2f, voltaje DC: %.2f V\n", i, voltajeADC, actual->valor);
-                actual = actual->siguiente;
+               
+               //Asignamos el registro modbus
+                switch(i){
+                    case CANAL_VOLTAJE_DC_1:
+                        asignarRegistroInputFloat(mapeo_modbus, actual->valor, REGISTRO_INPUT_V_DC_1, NO_SWAP);
+                        break;
+                    case CANAL_VOLTAJE_DC_2:
+                        asignarRegistroInputFloat(mapeo_modbus, actual->valor, REGISTRO_INPUT_V_DC_2, NO_SWAP);
+                        break;
+                    case CANAL_VOLTAJE_DC_3:
+                        asignarRegistroInputFloat(mapeo_modbus, actual->valor, REGISTRO_INPUT_V_DC_3, NO_SWAP);
+                        break;
+                    case CANAL_VOLTAJE_DC_4:
+                        asignarRegistroInputFloat(mapeo_modbus, actual->valor, REGISTRO_INPUT_V_DC_4, NO_SWAP);
+                        break;
+                    default:
+                        break;
+                }
+                
             } else if (i == CANAL_CORRIENTE_DC_1 || i == CANAL_CORRIENTE_DC_2 || i == CANAL_CORRIENTE_DC_3 || i == CANAL_CORRIENTE_DC_4) {
                 //corriente DC
                 actual->valor = voltajeACorrienteDC(voltajeADC);
                 //printf("\nSe ha obtenido la medicion del canal %d: %.2f, Corriente DC: %.2f A\n", i, voltajeADC, actual->valor);
+                
+                //Asignamos el registro modbus
+                switch(i){
+                    case CANAL_CORRIENTE_DC_1:
+                        asignarRegistroInputFloat(mapeo_modbus, actual->valor, REGISTRO_INPUT_I_DC_1, NO_SWAP);
+                        break;
+                    case CANAL_CORRIENTE_DC_2:
+                        asignarRegistroInputFloat(mapeo_modbus, actual->valor, REGISTRO_INPUT_I_DC_2, NO_SWAP);
+                        break;
+                    case CANAL_CORRIENTE_DC_3:
+                        asignarRegistroInputFloat(mapeo_modbus, actual->valor, REGISTRO_INPUT_I_DC_3, NO_SWAP);
+                        break;
+                    case CANAL_CORRIENTE_DC_4:
+                        asignarRegistroInputFloat(mapeo_modbus, actual->valor, REGISTRO_INPUT_I_DC_4, NO_SWAP);
+                        break;
+                    default:
+                        break;
+                }
+                
                 actual = actual->siguiente;
+                
             } else if (i == CANAL_CORRIENTE_AC_1 || i == CANAL_CORRIENTE_AC_2 || i == CANAL_CORRIENTE_AC_3 || i == CANAL_CORRIENTE_AC_4) {
                 //DATACENTER
                 //actual->valor = voltajeACorrienteAC(data_canal_1, noMuestras, rango); //Corriente AC solo esta en canales pares.
                 actual->valor = voltajeACorrienteAC(data_canal_1, noMuestras, rango);
                 //printf("\nSe ha obtenido la medicion del canal %d: %.2f, Corriente AC: %.2f A RMS\n", i, voltajeADC, actual->valor);
+                
+                 //Asignamos el registro modbus
+                switch(i){
+                    case CANAL_CORRIENTE_AC_1:
+                        asignarRegistroInputFloat(mapeo_modbus, actual->valor, REGISTRO_INPUT_I_AC_1, NO_SWAP);
+                        break;
+                    case CANAL_CORRIENTE_AC_2:
+                        asignarRegistroInputFloat(mapeo_modbus, actual->valor, REGISTRO_INPUT_I_AC_2, NO_SWAP);
+                        break;
+                    case CANAL_CORRIENTE_AC_3:
+                        asignarRegistroInputFloat(mapeo_modbus, actual->valor, REGISTRO_INPUT_I_AC_3, NO_SWAP);
+                        break;
+                    case CANAL_CORRIENTE_AC_4:
+                        asignarRegistroInputFloat(mapeo_modbus, actual->valor, REGISTRO_INPUT_I_AC_4, NO_SWAP);
+                        break;
+                    default:
+                        break;
+                }
+                
                 actual = actual->siguiente;
             } else if (i == CANAL_VOLTAJE_AC_1 || i == CANAL_VOLTAJE_AC_2) {
                 //Voltaje AC
                 actual->valor = voltajeAVoltajeAC(voltajeADC);
                 //printf("\nSe ha obtenido la medicion del canal %d: %.2f, Voltaje AC: %.2f V RMS\n", i, voltajeADC, actual->valor);
+                
+                switch(i){
+                    case CANAL_VOLTAJE_AC_1:
+                        asignarRegistroInputFloat(mapeo_modbus, actual->valor, REGISTRO_INPUT_V_AC_1, NO_SWAP);
+                        break;
+                    case CANAL_VOLTAJE_AC_2:
+                        asignarRegistroInputFloat(mapeo_modbus, actual->valor, REGISTRO_INPUT_V_AC_2, NO_SWAP);
+                        break;
+                    default:
+                        break;
+                }
+                
                 actual = actual->siguiente;
             }
             
@@ -320,8 +401,6 @@ int realizarMediciones(volatile struct medicion **med) { //CHECK!!!!!!!!!
             }
         }
         
-       
-
         free(data_canal_1);
         free(data_canal_2);
 

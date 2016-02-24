@@ -211,11 +211,14 @@ int conectar_modbus_serial(int modo_puerto, int baudrate, char *tty, int data_bi
     //El siguiente mapping sera usado.
     
     //-Coils para salidas DIGITALES (RELAYS)
-    //DIO0 a DIO3 --> Coils 1 a 4       (00001 a 00004)
+    //DIO0 a DIO3 --> Coils 1 a 4       (00001 a 00004)  --> Actuacion Relés aires acondicionados
     //-Puerta
     //DIO4        --> Discrete input 1 (10001)
     //Combustible --> Discrete input 2 (10002)      
     //Generador   --> Discrete input 3 (10003)
+    //AACC P.     --> Discrete input 4 (10004)      
+    //AACC B.     --> Discrete input 5 (10005)
+    // 
     //-Medidas ananlogas, usamos dos registros (input reg -> read only) consecutivos por medicion
     //Medicion              Canal Software          Registros MODBUS (2 por medicion, 32 bits)
     //I DC 1                    0                       40001 - 40002
@@ -237,7 +240,7 @@ int conectar_modbus_serial(int modo_puerto, int baudrate, char *tty, int data_bi
     //Humedad                  15                       40031 - 40032
     
     //4 bits (r/w), 3 input bits (read only), 0 HR (r/w), 32 input register (read only).
-    mapeo_modbus = modbus_mapping_new(4, 3, 0, 32);     //coils, input bits, reg, input regs
+    mapeo_modbus = modbus_mapping_new(NUMERO_COILS, NUMERO_INPUT_BITS, NUMERO_REG, NUMERO_INPUT_REG);     //coils, input bits, reg, input regs
 
     
     if(mapeo_modbus == NULL){

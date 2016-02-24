@@ -48,20 +48,13 @@
 #define INTERVALO_MON_PRED 5                   //(5 minutos)
 
 //Version del programa
-const volatile static char version[] = "1.2";
+const volatile static char version[] = "1.2.0";
 
 //Configuracion del monitor
 struct configuracionMonitor{
     int intervaloMonitoreo;
     int intervaloMonitoreoPuerta;
-    //int longitudValoresPemitidos;
-    //int puertoBD;
-    //int numeroServidoresSNMP;
-    //int numeroValoresMinimosPermitidos;
-    //int numeroDestinatariosAlertas;
-    //int numeroMaximoControladores;
     int numeroCanalesActivos;
-    //int periodoEnvioEmails;
     float razonCT;
     int monitoreoAires;
     int puertoDIO_ACPrincipal;
@@ -73,17 +66,6 @@ struct configuracionMonitor{
     char *rutaArchivoColumnasBDADC;
     char *rutaArchivoColumnasBDDIO;
     char *rutaArchivoConfiguracion;
-    //char *usuarioBD;
-    //char *claveBD;
-    //char *ipServidorBD;
-    //char *BD;
-    //char *comunidadSNMP;
-    //char *nombreSesionSNMP;
-    //char *ipServidorActualizaciones;
-    //char **ipServidorSNMP;
-    //char **valoresMinimosPermitidosMediciones;
-    //char **destinatariosAlertas;
-    //char **canalesActivos;
 };
 
 

@@ -1,6 +1,11 @@
 Bitacora de cambios
 *******************
 
+[1.2.0]
+
+ - Se añadio soporte para modbus RS-232, RS-485
+ - Se limpio código innecesario
+
 [1.1.2]
 
  - Se corrigio error de envio de datos al servidor (Falta commit)

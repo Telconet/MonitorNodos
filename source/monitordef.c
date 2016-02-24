@@ -30,6 +30,8 @@ void salir(int status){
  *El puerto de entrada esta por defaul activa high (1 logico = 3.3V)
  *0V   --> PUERTA CERRADA     (con circuito pull-up)
  *3.3V --> PUERTA ABIERTA
+ *
+ *Sensor es N.O. (Puerta cerrada == 0V)
  */
 void monitorPuerta(void *sd){
     
@@ -44,6 +46,20 @@ void monitorPuerta(void *sd){
     
     char *hora = obtenerHora();
     char *fecha = obtenerFecha();
+    
+    //Asignamos al registro modbus
+    if(usandoModbus){
+        pthread_mutex_lock(&mutexModbus);
+        
+        if(sensorPuerta == PUERTO_ON){
+            asignarInputBit(mapeo_modbus, ON, INPUT_BIT_PUERTA);
+        }
+        else{
+            asignarInputBit(mapeo_modbus, OFF, INPUT_BIT_PUERTA);
+        }
+        pthread_mutex_unlock(&mutexModbus);
+            
+    }
        
     //Hacemos una primera medicion, para saber el status real de la puerta
     if(sensorPuerta == PUERTO_OFF){        
@@ -71,6 +87,20 @@ void monitorPuerta(void *sd){
         
         //TODO chequear el sensor de la puerta
         sensorPuerta = statusPuerto(puerto_DIO_4);
+        
+        //Asignamos al registro modbus
+        if(usandoModbus){
+            pthread_mutex_unlock(&mutexModbus);
+            
+            if(sensorPuerta == PUERTO_ON){
+                asignarInputBit(mapeo_modbus, ON, INPUT_BIT_PUERTA);
+            }
+            else{
+                asignarInputBit(mapeo_modbus, OFF, INPUT_BIT_PUERTA);
+            }
+            pthread_mutex_unlock(&mutexModbus);
+                
+        }
         
         //Puerta abierta
         if(sensorPuerta == PUERTO_OFF && puertaAbiertaUltMed == CERRADO){        
@@ -155,9 +185,10 @@ void monitorAiresAcondicionados(void *sd){
     desactivarPuerto(configuracion->puertoDIO_ACBackup); //Backup
     sleep(2);
     
-    //Medimos el sensor del AC Pinr  
+    //Medimos el sensor del AC Pin 
     sensorAACCPrincipal = statusPuerto(puerto_DIO_5);
     sensorAACCBackup = statusPuerto(puerto_DIO_6);
+    
     
     pthread_mutex_lock(&mutex_status_AACC);
     status_A_C_principal = sensorAACCPrincipal;
@@ -212,6 +243,33 @@ void monitorAiresAcondicionados(void *sd){
     //Empezamos a monitorear el A/C
     while(1){
         
+        //Para Modbus...
+        sensorAACCPrincipal = statusPuerto(puerto_DIO_5);
+        sensorAACCBackup = statusPuerto(puerto_DIO_6);
+    
+        
+        //Asignamos al registro modbus
+        if(usandoModbus){
+            
+            int onOrOffPrincipal;
+            int onOrOffBackup;
+            
+            if(sensorAACCPrincipal == PUERTO_ON){
+                onOrOffPrincipal = ON;
+            }
+            else onOrOffPrincipal = OFF;
+            
+            if(sensorAACCBackup == PUERTO_ON){
+                onOrOffBackup = ON;
+            }
+            else onOrOffBackup = OFF;
+            
+            pthread_mutex_lock(&mutexModbus);
+            asignarInputBit(mapeo_modbus,onOrOffPrincipal, INPUT_BIT_AACC_PRINCIPAL);
+            asignarInputBit(mapeo_modbus, onOrOffBackup, INPUT_BIT_AACC_BACKUP);
+            pthread_mutex_unlock(&mutexModbus);
+        }
+        
         j = 0;
     
         char temperaturaStr[100];
@@ -234,13 +292,15 @@ void monitorAiresAcondicionados(void *sd){
             
             sleep(3);       //dar tiempo a reles para conmutar.
             
-            sensorAACCPrincipal = statusPuerto(puerto_DIO_5);
-            sensorAACCBackup = statusPuerto(puerto_DIO_6);
+            sensorAACCPrincipal = statusPuerto(configuracion->puertoDIO_ACPrincipal);
+            sensorAACCBackup = statusPuerto(configuracion->puertoDIO_ACBackup);
             
             pthread_mutex_lock(&mutex_status_AACC);
             status_A_C_principal = sensorAACCPrincipal;
             status_A_C_backup = sensorAACCBackup;
             pthread_mutex_unlock(&mutex_status_AACC);
+
+            
             
             //Cuando cambiamos de estado notificamos
             if(sensorAACCPrincipal == PUERTO_OFF){          //solo guardamos si A/C principal esta apagado. Caso contrario prendimos el A/C backup por temperatura.
@@ -611,18 +671,40 @@ void monitorModbus(void *sd){
             pthread_mutex_unlock(&mutexModbus);
         }
         else{
+            
             modbus_close(contexto_modbus);
-            perror("Error al recibir solicitud modbus.\n");
+            perror("ERROR: Problemas al recibir solicitud modbus.\n");
             modbus_connect(contexto_modbus);        //si hay error, reconectamos..
             
-            //Setear nuevamente para RS485 HD o FD..
-            //TODO...
+            int fd  = modbus_get_socket(contexto_modbus);
             
-            /*int fd  = modbus_get_socket(contexto_modbus);
-    
-            int mcr = AUTO485HD;
-            ioctl(fd, TIOC_SBCS485, &mcr);*/
-
+            //Convertimos el baud rate int a speed_t
+            speed_t baudrate;
+            
+            switch(baud_rate){
+                
+                case 19200:
+                    baudrate = B19200;
+                    break;
+                case 115200:
+                    baudrate = B115200;
+                    break;
+                case 9600:
+                    baudrate = B9600;
+                    break;
+                case 57600:
+                    baudrate = B57600;
+                    break;
+                default:
+                    baudrate = B19200;
+                    break;
+            }        
+            
+            if( establecer_atributos_interface(fd, baudrate, 0, modo_puerto) < 0){      //HW y SW
+                perror("ERROR: No se pudieron cambiar los parametros seriales - ");
+                modbus_free(contexto_modbus);
+                pthread_exit((void *)-1);
+            }
         }
     }
 }

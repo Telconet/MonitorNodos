@@ -105,9 +105,9 @@ int main(int argc, char *argv[]) {
     
     //Para modbus
     //Verifcamos argumentos.
-    int baud_rate = 19200;
-    int id_esclavo = 0;
-    int modo_puerto = 0;
+    baud_rate = 19200;
+    id_esclavo = 0;
+    modo_puerto = 0;
     modbus_t *contexto_modbus = NULL;
     pthread_t hiloModbus;
 	
