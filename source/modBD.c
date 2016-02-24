@@ -32,7 +32,7 @@ int insertarRegistro(char *nombreTabla, char **valores, int numeroValores, statu
         //printf("\nQuery: '%s'->%d\n", fromUser, strlen(fromUser));
 
         serv_addr.sin_family = AF_INET;
-        serv_addr.sin_port = htons(5000);
+        serv_addr.sin_port = htons(6000);
         serv_addr.sin_addr.s_addr = inet_addr("172.24.4.71");       //172.40.0.10
 
         conn = connect(sockfd, (struct sockaddr *) &serv_addr, sizeof (serv_addr));
