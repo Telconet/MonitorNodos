@@ -123,6 +123,8 @@ int main(int argc, char *argv[]) {
 		baud_rate = atoi(argv[4]);
 		id_esclavo = atoi(argv[3]);
 		modo_puerto = -1;
+		
+		printf("INFO: Modbus baud rate %d, id esclavo %d\n",baud_rate, id_esclavo);
 	    
 		if(strstr(argv[5], "rs485fd")){
 		    modo_puerto = MODO_RS_485_FD;

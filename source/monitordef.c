@@ -650,7 +650,7 @@ void monitorModbus(void *sd){
         printf("rc: %d\n",rc);
         
         if(rc > 0){
-             pthread_mutex_lock(&mutexModbus);
+            
         
             int i = 0;
             char buffer[2*MODBUS_TCP_MAX_ADU_LENGTH + 1];
@@ -662,6 +662,7 @@ void monitorModbus(void *sd){
             }
             printf("\n");
 
+            pthread_mutex_lock(&mutexModbus);
             printf("INFO: Respondiendo solicitud MODBUS... %s\n", buffer);
             int err = modbus_reply(contexto_modbus, solicitud, rc, mapeo_modbus);    //MODBUS responde a la solicitud
             printf("err = %d\n",err);
