@@ -41,6 +41,7 @@
 #define TEMPERATURA_CRITICA "temperatura-critica"
 #define PUERTO_DIO_AC_PRINCIPAL "puerto-dio-ac-principal"
 #define PUERTO_DIO_AC_BACKUP "puerto-dio-ac-backup"
+#define PUERTO_DATOS "puerto-datos"
 
 
 //Valore predeterminados de monitoreo
@@ -59,6 +60,7 @@ struct configuracionMonitor{
     int monitoreoAires;
     int puertoDIO_ACPrincipal;
     int puertoDIO_ACBackup;
+    int puertoDatosServidor;
     float temperaturaCritica;
     char *ip_servidor_datos;
     char *id_nodo;

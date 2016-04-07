@@ -1,6 +1,11 @@
 Bitacora de cambios
 *******************
 
+[1.2.1]
+
+ - Se añadio opción de especificar puerto de servidor de datos
+ - Se corrigió error creado durante implementación modbus
+
 [1.2.0]
 
  - Se añadio soporte para modbus RS-232, RS-485
@@ -8,7 +13,7 @@ Bitacora de cambios
 
 [1.1.2]
 
- - Se corrigio error de envio de datos al servidor (Falta commit)
+ - Se corrigio error de envio de datos al servidor 
 
 [1.1.1]
 

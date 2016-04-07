@@ -33,7 +33,7 @@ int insertarRegistro(char *nombreTabla, char **valores, int numeroValores, statu
         //printf("\nQuery: '%s'->%d\n", fromUser, strlen(fromUser));
 
         serv_addr.sin_family = AF_INET;
-        serv_addr.sin_port = htons(6000);
+        serv_addr.sin_port = htons(configuracion->puertoDatosServidor);
         serv_addr.sin_addr.s_addr = inet_addr(configuracion->ip_servidor_datos);       //172.40.0.10
 
         conn = connect(sockfd, (struct sockaddr *) &serv_addr, sizeof (serv_addr));
@@ -46,6 +46,8 @@ int insertarRegistro(char *nombreTabla, char **valores, int numeroValores, statu
         cont = 0;
         
         while(cont < 3){                                                //Maximo 3 reintentos
+            
+            
             
             int status = write(sockfd, fromUser, strlen(fromUser));     //Enviamos los datos de mediciones
             
@@ -140,7 +142,7 @@ int insertarEvento(int id_nodo, char *fecha, char *hora, char *evento){
         sprintf(fromUser, "%d,%s,%s,%s\n",id_nodo, fecha, hora, evento);
 
         serv_addr.sin_family = AF_INET;
-        serv_addr.sin_port = htons(6000);
+        serv_addr.sin_port = htons(configuracion->puertoDatosServidor);
         serv_addr.sin_addr.s_addr = inet_addr(configuracion->ip_servidor_datos);       //172.40.0.10
 
         conn = connect(sockfd, (struct sockaddr *) &serv_addr, sizeof (serv_addr));
@@ -170,6 +172,7 @@ int insertarEvento(int id_nodo, char *fecha, char *hora, char *evento){
         while(cont < 3){                                                //Maximo 3 reintentos
             
             int status = write(sockfd, fromUser, strlen(fromUser));     //Enviamos los datos de mediciones
+            
             
             if(status < 0){
                 perror("ERROR: No se pudo enviar la informacion.\n");

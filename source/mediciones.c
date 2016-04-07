@@ -245,17 +245,6 @@ int realizarMediciones(volatile struct medicion **med) { //CHECK!!!!!!!!!
                 //En la iteracion impar, ya tenemos los datos leidos del ADC
                 voltajeADC = promedioVoltaje(data_canal_2, noMuestras, rango);
             }
-
-            //Vemos a que medicion nos referimos
-            //y realizamos el calculo correspondiente.
-            
-            //la información tiene que ser consistente para modbus
-            /*if(usandoModbus){
-                pthread_mutex_lock(&mutexModbus);
-            }
-            else{
-                //printf("No usamos mutex modbus\n");
-            }*/
             
             if (i == CANAL_TEMPERATURA_1) {
                 //temperatura
@@ -281,7 +270,6 @@ int realizarMediciones(volatile struct medicion **med) { //CHECK!!!!!!!!!
                 //voltaje del relé
                 actual->valor = voltajeADC;
 
-                actual = actual->siguiente;
                 
                 if(usandoModbus){
                     int onOrOff;
@@ -300,6 +288,7 @@ int realizarMediciones(volatile struct medicion **med) { //CHECK!!!!!!!!!
                     }
                      pthread_mutex_unlock(&mutexModbus);
                 }
+                actual = actual->siguiente;
                 
             } else if (i == CANAL_HUMEDAD) {
                 //humedad
@@ -337,7 +326,8 @@ int realizarMediciones(volatile struct medicion **med) { //CHECK!!!!!!!!!
                             break;
                     }
                      pthread_mutex_unlock(&mutexModbus);
-               }
+                }
+                actual = actual->siguiente;
                 
             } else if (i == CANAL_CORRIENTE_DC_1 || i == CANAL_CORRIENTE_DC_2 || i == CANAL_CORRIENTE_DC_3 || i == CANAL_CORRIENTE_DC_4) {
                 //corriente DC
@@ -519,6 +509,7 @@ int almacenarMediciones(volatile struct medicion **med, char *nombreNodo, char *
             //int res = crearTabla(&conexion, nombreTabla, tipoColumnas, numeroColumnas); //numeroValores + 3
             //Ingresamos los datos a la tabla
             //insertarRegistro2(&conexion, nombreTabla, medicionesStr, numeroColumnas); //-->leak?
+            printf("MedicionesStr %s\n", *medicionesStr);
             insertarRegistro(nombreTabla, medicionesStr, numeroColumnas, stp, sts); //-->leak?
         }
 

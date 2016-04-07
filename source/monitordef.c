@@ -526,6 +526,16 @@ struct configuracionMonitor* leerArchivoConfiguracion(char *rutaArchivo){
                     }
                     else return NULL; 
                 }
+                else if(strstr(linea, PUERTO_DATOS) != NULL){
+                    //DIO AC backup
+                    valores = obtenerValorConfig(linea, &num);
+                    if(valores != NULL){
+                        configuracion->puertoDatosServidor = atoi(valores[0]);
+                        
+                        printf("INFO: Puerto servidor datos: %d\n", configuracion->puertoDatosServidor);
+                    }
+                    else return NULL; 
+                }
             }
         }
         fclose(archivo);
