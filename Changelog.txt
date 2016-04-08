@@ -1,5 +1,5 @@
-Bitacora de cambios
-*******************
+Bitacora de cambios (Master DC)
+*******************************
 
 [1.2.1]
 

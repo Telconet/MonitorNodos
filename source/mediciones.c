@@ -361,8 +361,9 @@ int realizarMediciones(volatile struct medicion **med) { //CHECK!!!!!!!!!
                 
             } else if (i == CANAL_CORRIENTE_AC_1 || i == CANAL_CORRIENTE_AC_2 || i == CANAL_CORRIENTE_AC_3 || i == CANAL_CORRIENTE_AC_4) {
                 //DATACENTER
-                //actual->valor = voltajeACorrienteAC(data_canal_1, noMuestras, rango); //Corriente AC solo esta en canales pares.
-                actual->valor = voltajeACorrienteAC(data_canal_1, noMuestras, rango);
+                actual->valor = voltajeACorrienteDC(voltajeADC);
+                
+                //actual->valor = voltajeACorrienteAC(data_canal_1, noMuestras, rango);
                 //printf("\nSe ha obtenido la medicion del canal %d: %.2f, Corriente AC: %.2f A RMS\n", i, voltajeADC, actual->valor);
                 
                 if(usandoModbus){
